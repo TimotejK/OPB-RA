@@ -94,7 +94,7 @@ function findOperation(tokenizedExpression, operation) {
                 } else {
                     expressionAfter = tokenizedExpression.slice(i + 1, tokenizedExpression.length)
                 }
-                return {index: i, opperationToken: tokenizedExpression[i], parametersBefore, parametersAfter, expressionBefore, expressionAfter}
+                return {index: i, operationToken: tokenizedExpression[i], parametersBefore, parametersAfter, expressionBefore, expressionAfter}
             }
         }
     }
@@ -183,30 +183,30 @@ function logicExpression(expression, variables, startPosition) {
         found = findOperation(tokenizedExpression, operations[i]);
         if (found) {
             if (!found.expressionBefore || found.expressionBefore.length == 0) {
-                return {type: 'error', description: 'Manjka izraz levo od operacije', location: found.opperationToken.location};
+                return {type: 'error', description: 'Manjka izraz levo od operacije', location: found.operationToken.location};
             }
             let leftResult = logicExpression(found.expressionBefore, variables)
             if (leftResult.type == 'error') {return leftResult};
             
             if (!found.expressionAfter || found.expressionAfter.length == 0) {
-                return {type: 'error', description: 'Manjka izraz desno od operacije', location: found.opperationToken.location};
+                return {type: 'error', description: 'Manjka izraz desno od operacije', location: found.operationToken.location};
             }
             let rightResult = logicExpression(found.expressionAfter, variables)
             if (rightResult.type == 'error') {return rightResult};
 
             if (operationIsNumeric[i]) {
                 if (leftResult.type != 'numericValue') {
-                    return {type: 'error', description: 'Leva stran operacije mora imeti numerično vrednost', location: found.opperationToken.location};
+                    return {type: 'error', description: 'Leva stran operacije mora imeti numerično vrednost', location: found.operationToken.location};
                 }
                 if (rightResult.type != 'numericValue') {
-                    return {type: 'error', description: 'Desna stran operacije mora imeti numerično vrednost', location: found.opperationToken.location};
+                    return {type: 'error', description: 'Desna stran operacije mora imeti numerično vrednost', location: found.operationToken.location};
                 }
             } else {
                 if (leftResult.type != 'logicValue') {
-                    return {type: 'error', description: 'Leva stran operacije mora imeti logično vrednost', location: found.opperationToken.location};
+                    return {type: 'error', description: 'Leva stran operacije mora imeti logično vrednost', location: found.operationToken.location};
                 }
                 if (rightResult.type != 'logicValue') {
-                    return {type: 'error', description: 'Desna stran operacije mora imeti logično vrednost', location: found.opperationToken.location};
+                    return {type: 'error', description: 'Desna stran operacije mora imeti logično vrednost', location: found.operationToken.location};
                 }
             }
             let result = eval("leftResult.value " + operationsJS[i] + " rightResult.value")
@@ -225,17 +225,17 @@ function logicExpression(expression, variables, startPosition) {
         // return (!logicExpression(found.expressionAfter, variables))
 
         if (found.expressionBefore && found.expressionBefore.length > 0) {
-            return {type: 'error', description: 'Operacija pričakuje izraze samo na desni strani', location: found.opperationToken.location};
+            return {type: 'error', description: 'Operacija pričakuje izraze samo na desni strani', location: found.operationToken.location};
         }
         
         if (!found.expressionAfter || found.expressionAfter.length == 0) {
-            return {type: 'error', description: 'Manjka izraz desno od operacije', location: found.opperationToken.location};
+            return {type: 'error', description: 'Manjka izraz desno od operacije', location: found.operationToken.location};
         }
         let rightResult = logicExpression(found.expressionBefore, variables)
         if (rightResult.type == 'error') {return rightResult};
 
         if (rightResult.type != 'logicValue') {
-            return {type: 'error', description: 'Desna stran operacije mora imeti logično vrednost', location: found.opperationToken.location};
+            return {type: 'error', description: 'Desna stran operacije mora imeti logično vrednost', location: found.operationToken.location};
         }
 
         let result = !rightResult.value
@@ -262,12 +262,11 @@ function logicExpression(expression, variables, startPosition) {
     for (let i = 0; i < operationsForTokenization.length; i++) {
         let found = findOperation(tokenizedExpression, operationsForTokenization[i]);
         if (found) {
-            return {type: 'error', description: 'Znotraj logičnih izrazov ni mogoča uporaba relacijskih operacij', location: found.opperationToken.location}
+            return {type: 'error', description: 'Znotraj logičnih izrazov ni mogoča uporaba relacijskih operacij', location: found.operationToken.location}
         }
     } 
 
-    console.log({type: 'error', description: 'Neznana operacija', location: startPosition})
-    return {type: 'error', description: 'Neznana operacija', location: startPosition}
+    return {type: 'error', description: 'Neznana operacija/spremenljivka', location: startPosition}
 }
 
 function isNumeric(str) {
@@ -394,11 +393,85 @@ function op(operator, relation1, relation2, parametersToken) {
 }
 
 function applySimpleOperations(tokenizedExpression) {
-    
+    let operations = ["π", "σ", "ρ", "τ"];
+    for (let i = 0; i < operations.length; i++) {
+        let operator = operations[i];
+        let found = findOperation(tokenizedExpression, operator);
+        if (found) {
+            if (operator != "τ" && found.parametersBefore != null) {
+                return {type: 'error', description: 'Odvečni parametri pred operacijo', location: found.parametersBefore.location}
+            }
+            if (found.parametersAfter == null) {
+                return {type: 'error', description: 'Manjkajo parametri operacije', location: found.operationToken.location}
+            }
+            if (found.expressionAfter == null) {
+                return {type: 'error', description: 'Manjka desna stran izraza', location: found.operationToken.location}
+            }
+            
+            let rightSide = evaluateExpression(found.expressionAfter, null);
+            if (rightSide.type == 'error') return rightSide;
+            if (rightSide.type != 'result') return {type: 'error', description: 'Napaka desno od operacije', location: found.operationToken.location};
+
+            // product
+            let newName = operator + rightSide.relation.name;
+            if (operator == "π") {
+                let columnNames = rightSide.relation.header;
+                let includedColumns = [];
+                let includedColumnIndex = [];
+                let tokens = tokenize(found.parametersAfter.token, found.parametersAfter.location);
+                if (tokens.type == 'error') {return tokens;}
+                tokens = tokens.tokens;
+                for (let j = 0; j < tokens.length; j++) {
+                    if (columnNames.includes(tokens[j].token)) {
+                        includedColumns.push(tokens[j].token);
+                        includedColumnIndex.push(columnNames.indexOf(tokens[j].token));
+                    } else {
+                        return {type: 'error', description: 'Neveljavno ime stolpca', location: tokens[j].location};
+                    }
+                }
+                
+                let newData = [];
+                for (let j = 0; j < rightSide.relation.data.length; j++) {
+                    let row = [];
+                    for (let k = 0; k < includedColumnIndex.length; k++) {
+                        row.push(rightSide.relation.data[j][includedColumnIndex[k]]);
+                    }
+                    newData.push(row);
+                }
+                let types = [];
+                for (let k = 0; k < includedColumnIndex.length; k++) {
+                    types.push(rightSide.relation.types[includedColumnIndex[k]]);
+                }
+
+                let newRelation = {types: types, header: includedColumns, data: newData, name: newName};
+                return {type: 'result', relation: newRelation};
+            }
+            
+            if (operator == "σ") {
+                let newData = [];
+                for (let j = 0; j < rightSide.relation.data.length; j++) {
+                    let variables = {};
+                    for (let k = 0; k < rightSide.relation.data[j].length; k++) {
+                        variables[rightSide.relation.header[k]] = rightSide.relation.data[j][k];
+                    }
+
+                    let result = logicExpression(found.parametersAfter.token, variables, found.parametersAfter.location);
+                    if (result.type == 'error') {return result};
+                    if (result.type != 'logicValue') {return {type: 'error', description: 'Pogoj mora vrniti logično vrednost', location: found.parametersAfter.location};}
+                    if (result.value) {
+                        newData.push(rightSide.relation.data[j]);
+                    }
+                }
+
+                let newRelation = {types: rightSide.relation.types, header: rightSide.relation.header, data: newData, name: newName};
+                return {type: 'result', relation: newRelation};
+            }
+
+        }
+    }
 }
 
 function applyDoubleOperations(tokenizedExpression) {
-    // union
     let operations = ["∪", "∩", "⨯", "⨝", "⋊", "⋉"];
     for (let i = 0; i < operations.length; i++) {
         let operator = operations[i];
@@ -411,17 +484,17 @@ function applyDoubleOperations(tokenizedExpression) {
                 return {type: 'error', description: 'Odvečni parametri po operaciji', location: found.parametersAfter.location}
             }
             if (found.expressionBefore == null) {
-                return {type: 'error', description: 'Manjka leva stran izraza', location: found.opperationToken.location}
+                return {type: 'error', description: 'Manjka leva stran izraza', location: found.operationToken.location}
             }
             if (found.expressionAfter == null) {
-                return {type: 'error', description: 'Manjka desna stran izraza', location: found.opperationToken.location}
+                return {type: 'error', description: 'Manjka desna stran izraza', location: found.operationToken.location}
             }
             let leftSide = evaluateExpression(found.expressionBefore, null);
             if (leftSide.type == 'error') return leftSide;
-            if (leftSide.type != 'result') return {type: 'error', description: 'Napaka levo od operacije', location: found.opperationToken.location};
+            if (leftSide.type != 'result') return {type: 'error', description: 'Napaka levo od operacije', location: found.operationToken.location};
             let rightSide = evaluateExpression(found.expressionAfter, null);
             if (rightSide.type == 'error') return rightSide;
-            if (rightSide.type != 'result') return {type: 'error', description: 'Napaka desno od operacije', location: found.opperationToken.location};
+            if (rightSide.type != 'result') return {type: 'error', description: 'Napaka desno od operacije', location: found.operationToken.location};
 
             // product
             if (operator == "⨯" || operator == "⨝" || operator == "⋉" || operator == "⋊") {
@@ -430,7 +503,7 @@ function applyDoubleOperations(tokenizedExpression) {
 
             // check if types are correct
             if (JSON.stringify(leftSide.relation.types) != JSON.stringify(rightSide.relation.types)) {
-                return {type: 'error', description: 'Tipi na levi in desni strani operacije se ne ujemajo', location: found.opperationToken.location}
+                return {type: 'error', description: 'Tipi na levi in desni strani operacije se ne ujemajo', location: found.operationToken.location}
             }
             if (operator == "∪") {
                 let combinedRelation = {...leftSide.relation};
@@ -471,6 +544,9 @@ function evaluateExpression(expression, startPosition) {
     }
     
     let result = applyDoubleOperations(tokenizedExpression);
+    if (result) {return result;}
+    
+    result = applySimpleOperations(tokenizedExpression);
     if (result) {return result;}
 
     let izraz = "";
