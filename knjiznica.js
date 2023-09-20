@@ -1,3 +1,8 @@
+function insertAlternativeSymbols(expression) {
+    expression = expression.replaceAll('×', '⨯');
+    return expression;
+}
+
 function findMatchingParenthesis(expression, firstLocation, open, close, startingPosition) {
     let i = firstLocation + 1;
     let level = 1;
@@ -504,7 +509,12 @@ function applySimpleOperations(tokenizedExpression) {
             if (found.parametersAfter == null) {
                 return {type: 'error', description: 'Manjkajo parametri operacije', location: found.operationToken.location};
             }
-            if (found.expressionAfter == null) {
+            
+            if (found.expressionBefore.length > 0) {
+                return {type: 'error', description: 'Na levi strani operacije so odvečni izrazi', location: found.operationToken.location};
+            }
+
+            if (found.expressionAfter.length == 0) {
                 return {type: 'error', description: 'Manjka desna stran izraza', location: found.operationToken.location};
             }
             
@@ -648,10 +658,10 @@ function applyDoubleOperations(tokenizedExpression) {
             if (operator != "⨝" && operator != "⋉" && operator != "⋊" && found.parametersAfter != null) {
                 return {type: 'error', description: 'Odvečni parametri po operaciji', location: found.parametersAfter.location}
             }
-            if (found.expressionBefore == null) {
+            if (found.expressionBefore == null || found.expressionBefore.length == 0) {
                 return {type: 'error', description: 'Manjka leva stran izraza', location: found.operationToken.location}
             }
-            if (found.expressionAfter == null) {
+            if (found.expressionAfter == null || found.expressionAfter.length == 0) {
                 return {type: 'error', description: 'Manjka desna stran izraza', location: found.operationToken.location}
             }
             let leftSide = evaluateExpression(found.expressionBefore, null);
