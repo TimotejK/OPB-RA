@@ -392,6 +392,97 @@ function op(operator, relation1, relation2, parametersToken) {
     }
 }
 
+function convertRow(row, header, columnNames) {
+    let values = [];
+    for (let i = 0; i < header.length; i++) {
+        if (columnNames.includes(header[i])) {
+            values.push(row[i])
+        }
+    }
+    return JSON.stringify(values);
+}
+
+function aggregation(relation, columnNames, functions) {
+    let columnNamesForGroups = columnNames.map(name => name.token);
+    let columnTypesForGroups = columnNames.map(name => relation.types[relation.header.indexOf(name.token)]);
+    let groups = [""];
+    if (columnNames.length > 0) {
+        groups = Array.from(new Set(relation.data.map(row => {return convertRow(row, relation.header, columnNamesForGroups)})));
+    }
+
+    let validFunctions = ['SUM', 'AVG', 'MIN', 'MAX'];
+    let validColumns = relation.header;
+
+    let functionName = [];
+    let functionParametersIndexes = [];
+    for (let i = 0; i < functions.length; i += 2) {
+        if (i + 1 >= functions.length) {
+            return {type: 'error', description: 'Vsaka agregacijska funkcija potrebuje parametre', location: functions[i].location};
+        }
+        if (functions[i].type == "word" && (functions[i+1].type == "(" || functions[i+1].type == "word")) {
+            if (validFunctions.includes(functions[i].token)) {
+                functionName.push(functions[i].token)
+            } else {
+                return {type: 'error', description: 'Neveljavno ime agregacijske funkcije: ' + functions[i].token, location: functions[i].location};
+            }
+            if (validColumns.includes(functions[i+1].token)) {
+                functionParametersIndexes.push(validColumns.indexOf(functions[i+1].token))
+            } else {
+                return {type: 'error', description: 'Neveljavno ime atributa: ' + functions[i+1].token, location: functions[i+1].location};
+            }
+        } else {
+            return {type: 'error', description: 'Vsaka agregacijska funkcija potrebuje parametre: ' + functions[i].token, location: functions[i].location};
+        }
+    }
+
+    let rows = [];
+
+    for (let i = 0; i < groups.length; i++) {
+        let group = groups[i];
+        let row = [];
+        if (columnNames.length > 0) {
+            row = JSON.parse(group)
+        }
+        for (let fun = 0; fun < functionName.length; fun++) {
+            let aggregationFunction = functionName[fun];
+
+            let values = [];
+            for (let j = 0; j < relation.data.length; j++) {
+                if (columnNames.length == 0 || group == convertRow(relation.data[j], relation.header, columnNamesForGroups)) {
+                    values.push(relation.data[j][functionParametersIndexes[fun]]);
+                }
+            }
+
+            let result = 0;
+            if (aggregationFunction == "SUM") {
+                result = 0;
+                values.forEach(v => {result += v;})
+            } else if (aggregationFunction == "AVG") {
+                result = 0;
+                values.forEach(v => {result += v;})
+                reuslt /= values.length;
+            } else if (aggregationFunction == "MIN") {
+                result = values[0];
+                values.forEach(v => {if (v < result) {result = v;}})
+            } else if (aggregationFunction == "MAX") {
+                result = values[0];
+                values.forEach(v => {if (v > result) {result = v;}})
+            }
+
+            row.push(result);
+        }
+        rows.push(row);
+    }
+    let header = columnNamesForGroups;
+    let types = columnTypesForGroups;
+    for (let fun = 0; fun < functionName.length; fun++) {
+        header.push(null);
+        types.push('number');
+    }
+    let newRelation = {types: types, header: header, data: rows, name: relation.name};
+    return {type: 'result', relation: newRelation};
+}
+
 function applySimpleOperations(tokenizedExpression) {
     let operations = ["π", "σ", "ρ", "τ"];
     for (let i = 0; i < operations.length; i++) {
@@ -399,13 +490,13 @@ function applySimpleOperations(tokenizedExpression) {
         let found = findOperation(tokenizedExpression, operator);
         if (found) {
             if (operator != "τ" && found.parametersBefore != null) {
-                return {type: 'error', description: 'Odvečni parametri pred operacijo', location: found.parametersBefore.location}
+                return {type: 'error', description: 'Odvečni parametri pred operacijo', location: found.parametersBefore.location};
             }
             if (found.parametersAfter == null) {
-                return {type: 'error', description: 'Manjkajo parametri operacije', location: found.operationToken.location}
+                return {type: 'error', description: 'Manjkajo parametri operacije', location: found.operationToken.location};
             }
             if (found.expressionAfter == null) {
-                return {type: 'error', description: 'Manjka desna stran izraza', location: found.operationToken.location}
+                return {type: 'error', description: 'Manjka desna stran izraza', location: found.operationToken.location};
             }
             
             let rightSide = evaluateExpression(found.expressionAfter, null);
@@ -514,6 +605,22 @@ function applySimpleOperations(tokenizedExpression) {
 
                 let newRelation = {types: rightSide.relation.types, header: newColumnNames, data: rightSide.relation.data, name: newRelationName};
                 return {type: 'result', relation: newRelation};
+            }
+
+            if (operator == "τ") {
+                let tokenizedGroups = [];
+                if (found.parametersBefore) {
+                    tokenizedGroups = tokenize(found.parametersBefore.token, found.parametersBefore.location);
+                    if (tokenizedGroups.type == 'error') {return tokenizedGroups;}
+                    tokenizedGroups = tokenizedGroups.tokens;
+                }
+                
+                let tokenizedFunctions = tokenize(found.parametersAfter.token, found.parametersAfter.location);
+                if (tokenizedFunctions.type == 'error') {return tokenizedFunctions;}
+                tokenizedFunctions = tokenizedFunctions.tokens;
+
+                let result = aggregation(rightSide.relation, tokenizedGroups, tokenizedFunctions);
+                return result;
             }
 
         }
