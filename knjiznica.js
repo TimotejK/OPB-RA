@@ -466,6 +466,55 @@ function applySimpleOperations(tokenizedExpression) {
                 let newRelation = {types: rightSide.relation.types, header: rightSide.relation.header, data: newData, name: newName};
                 return {type: 'result', relation: newRelation};
             }
+            
+            if (operator == "ρ") {
+                let tokenizedArgument = tokenize(found.parametersAfter.token, found.parametersAfter.location);
+                if (tokenizedArgument.type == 'error') {return tokenizedArgument;}
+                tokenizedArgument = tokenizedArgument.tokens;
+                let newRelationName = null;
+                let newColumnNames = null;
+                let newColumnNamesLocation = 0;
+                for (let i = 0; i < tokenizedArgument.length; i++) {
+                    if (tokenizedArgument[i].type == 'word' || tokenizedArgument[i].type == '"' || tokenizedArgument[i].type == "'") {
+                        if (newRelationName) {
+                            return {type: 'error', description: 'Dovoljeno je samo eno novo ime relacije', location: tokenizedArgument[i].location};
+                        }
+                        if (newColumnNames) {
+                            return {type: 'error', description: 'Ime relacije mora biti pred imeni argumentov', location: tokenizedArgument[i].location};
+                        }
+                        newRelationName = tokenizedArgument[i].token;
+                    }
+                    if (tokenizedArgument[i].type == '(') {
+                        if (newColumnNames) {
+                            return {type: 'error', description: 'Nova imena argumentov lahko podaš samo enkrat', location: tokenizedArgument[i].location};
+                        }
+                        newColumnNames = tokenizedArgument[i].token;
+                        newColumnNamesLocation = tokenizedArgument[i].location;
+                    }
+                }
+
+                if (!newRelationName) {
+                    newRelationName = newName;
+                }
+                if (newColumnNames) {
+                    let tokenizedColumnNames = tokenize(newColumnNames, newColumnNamesLocation);
+                    if (tokenizedColumnNames.type == 'error') {return tokenizedColumnNames;}
+                    tokenizedColumnNames = tokenizedColumnNames.tokens;
+                    if (tokenizedColumnNames.length != rightSide.relation.header.length) {
+                        return {type: 'error', description: 'Število imen argumentov ni pravilno', location: newColumnNamesLocation};
+                    }
+                    let names = [];
+                    for (let i = 0; i < tokenizedColumnNames.length; i++) {
+                        names.push(tokenizedColumnNames[i].token);
+                    }
+                    newColumnNames = names;
+                } else {
+                    newColumnNames = rightSide.relation.header;
+                }
+
+                let newRelation = {types: rightSide.relation.types, header: newColumnNames, data: rightSide.relation.data, name: newRelationName};
+                return {type: 'result', relation: newRelation};
+            }
 
         }
     }
@@ -536,11 +585,11 @@ function evaluateExpression(expression, startPosition) {
     }
 
     if (tokenizedExpression.length == 1 && tokenizedExpression[0].type == "(") {
-        return evaluateExpression(tokenizedExpression[0].token, tokenizedExpression[0].loaction);
+        return evaluateExpression(tokenizedExpression[0].token, tokenizedExpression[0].location);
     }
 
     if (tokenizedExpression.length == 1) {
-        return insertValue(tokenizedExpression, tokenizedExpression[0].loaction);
+        return insertValue(tokenizedExpression, tokenizedExpression[0].location);
     }
     
     let result = applyDoubleOperations(tokenizedExpression);
