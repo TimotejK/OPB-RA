@@ -416,7 +416,7 @@ function aggregation(relation, columnNames, functions) {
         groups = Array.from(new Set(relation.data.map(row => {return convertRow(row, relation.header, columnNamesForGroups)})));
     }
 
-    let validFunctions = ['SUM', 'AVG', 'MIN', 'MAX'];
+    let validFunctions = ['SUM', 'AVG', 'MIN', 'MAX', 'COUNT'];
     let validColumns = relation.header;
 
     let functionName = [];
@@ -473,6 +473,9 @@ function aggregation(relation, columnNames, functions) {
             } else if (aggregationFunction == "MAX") {
                 result = values[0];
                 values.forEach(v => {if (v > result) {result = v;}})
+            } else if (aggregationFunction == "COUNT") {
+                result = 0;
+                values.forEach(v => {if (v != null) {result++;}})
             }
 
             row.push(result);
