@@ -108,9 +108,9 @@ let relations = [
             [2, "Jack","1950-06-02", 1],
             [3, "Joe","1989-08-01", 4],
             [4, "Jenn","2001-01-07", 2],
-            [5, "Jeff","NULL", 2],
+            [5, "Jeff",null, 2],
             [6, "Edna","2011-04-23", 3],
-            [7, "North","NULL", 3]
+            [7, "North",null, 3]
         ]},
     {name: 'facebook', header: ['OID', 'PID'], types: ['number', 'number'],
         data: [
@@ -401,6 +401,12 @@ function convertRow(row, header, columnNames) {
     }
     return JSON.stringify(values);
 }
+
+// function compareValues(comparator, value1, type1, value2, type2) {
+//     if (type1 == 'date') {
+//         value1 = 
+//     }
+// }
 
 function aggregation(relation, columnNames, functions) {
     let columnNamesForGroups = columnNames.map(name => name.token);
@@ -799,6 +805,7 @@ function displayResult(id, result, expression) {
 
 function runEvaluation(id) {
     let expression = document.getElementById(id).value
+    expression = insertAlternativeSymbols(expression);
     let result = evaluateExpression(expression, 0);
     console.log(result);
     displayResult(id, result, expression)
