@@ -173,7 +173,8 @@ function insertValue(tokenizedExpression) {
     if (tokenizedExpression.length == 1 && (tokenizedExpression[0].type == "word" || tokenizedExpression[0].type == '"')) {
         for (let i = 0; i < relations.length; i++) {
             if (relations[i].name == tokenizedExpression[0].token) {
-                return { type: 'result', relation: relations[i] }
+                let explanation = '<span class="variable">' + relations[i].name + "</span>";
+                return { type: 'result', relation: relations[i], explanation: explanation }
             }
         }
         return { type: 'error', description: 'Neznano ime spremenljivke', location: tokenizedExpression[0].location }
@@ -508,7 +509,11 @@ function aggregation(relation, columnNames, functions) {
     let types = columnTypesForGroups;
     for (let fun = 0; fun < functionName.length; fun++) {
         header.push(null);
-        types.push('number');
+        if (functionName[fun] == 'COUNT') {
+            types.push('number');
+        } else {
+            types.push(relation.types[functionParametersIndexes[fun]]);
+        }
     }
     let newRelation = { types: types, header: header, data: rows, name: relation.name };
     return { type: 'result', relation: newRelation };
@@ -516,8 +521,22 @@ function aggregation(relation, columnNames, functions) {
 
 function applySimpleOperations(tokenizedExpression) {
     let operations = ["π", "σ", "ρ", "τ"];
+
+    let foundOperations = [];
+    let foundIndexes = [];
     for (let i = 0; i < operations.length; i++) {
         let operator = operations[i];
+        let found = findOperation(tokenizedExpression, operator);
+        if (found) {
+            foundOperations.push(operator);
+            foundIndexes.push(found.index);
+        }
+    }
+    let firstOperator = foundOperations[foundIndexes.indexOf(Math.min(...foundIndexes))];
+
+    // for (let i = 0; i < operations.length; i++) {
+        // let operator = operations[i];
+        let operator = firstOperator;
         let found = findOperation(tokenizedExpression, operator);
         if (found) {
             if (operator != "τ" && found.parametersBefore != null) {
@@ -541,6 +560,7 @@ function applySimpleOperations(tokenizedExpression) {
 
             // product
             let newName = operator + rightSide.relation.name;
+            let explanation = '<span class="operator">' + operator + "</span><sub>" + found.parametersAfter.token + "</sub> (" + rightSide.explanation + ")";
             if (operator == "π") {
                 let columnNames = rightSide.relation.header;
                 let includedColumns = [];
@@ -571,7 +591,7 @@ function applySimpleOperations(tokenizedExpression) {
                 }
 
                 let newRelation = { types: types, header: includedColumns, data: newData, name: newName };
-                return { type: 'result', relation: newRelation };
+                return { type: 'result', relation: newRelation, explanation:explanation };
             }
 
             if (operator == "σ") {
@@ -591,7 +611,7 @@ function applySimpleOperations(tokenizedExpression) {
                 }
 
                 let newRelation = { types: rightSide.relation.types, header: rightSide.relation.header, data: newData, name: newName };
-                return { type: 'result', relation: newRelation };
+                return { type: 'result', relation: newRelation, explanation: explanation };
             }
 
             if (operator == "ρ") {
@@ -640,7 +660,7 @@ function applySimpleOperations(tokenizedExpression) {
                 }
 
                 let newRelation = { types: rightSide.relation.types, header: newColumnNames, data: rightSide.relation.data, name: newRelationName };
-                return { type: 'result', relation: newRelation };
+                return { type: 'result', relation: newRelation, explanation: explanation };
             }
 
             if (operator == "τ") {
@@ -656,11 +676,13 @@ function applySimpleOperations(tokenizedExpression) {
                 tokenizedFunctions = tokenizedFunctions.tokens;
 
                 let result = aggregation(rightSide.relation, tokenizedGroups, tokenizedFunctions);
+                let explanation = (found.parametersBefore ? "<sub>" + found.parametersBefore.token + "</sub>" : "") + '<span class="operator">' + operator + "</span><sub>" + found.parametersAfter.token + "</sub> (" + rightSide.explanation + ")";
+                result.explanation = explanation;
                 return result;
             }
 
         }
-    }
+    // }
 }
 
 function applyDoubleOperations(tokenizedExpression) {
@@ -690,7 +712,12 @@ function applyDoubleOperations(tokenizedExpression) {
 
             // product
             if (operator == "⨯" || operator == "⨝" || operator == "⋉" || operator == "⋊") {
-                return op(operator, leftSide.relation, rightSide.relation, found.parametersAfter)
+                let explanation = "(" + leftSide.explanation + ') <span class="operator">' + operator + "</span>" + 
+                (found.parametersAfter ? "<sub>" + found.parametersAfter.token + "</sub>" : "") + 
+                " (" + rightSide.explanation + ")";
+                let result = op(operator, leftSide.relation, rightSide.relation, found.parametersAfter)
+                result.explanation = explanation;
+                return result;
             }
 
             // check if types are correct
@@ -703,14 +730,16 @@ function applyDoubleOperations(tokenizedExpression) {
                 rightRelation = convertDataToText(rightSide.relation);
                 combinedRelation.data = _.union(leftRelation.data, rightRelation.data);
                 combinedRelation.name = leftRelation.name + operator + rightRelation.name;
-                return { type: 'result', relation: convertDataFromText(combinedRelation) }
+                let explanation = "(" + leftSide.explanation + ') <span class="operator">' + operator + "</span> (" + rightSide.explanation + ")";
+                return { type: 'result', relation: convertDataFromText(combinedRelation), explanation: explanation }
             } else if (operator == "∩") {
                 let combinedRelation = { ...leftSide.relation };
                 leftRelation = convertDataToText(leftSide.relation);
                 rightRelation = convertDataToText(rightSide.relation);
+                let explanation = "(" + leftSide.explanation + ') <span class="operator">' + operator + "</span> (" + rightSide.explanation + ")";
                 combinedRelation.data = leftRelation.data.filter(value => rightRelation.data.includes(value));
                 combinedRelation.name = leftRelation.name + operator + rightRelation.name;
-                return { type: 'result', relation: convertDataFromText(combinedRelation) };
+                return { type: 'result', relation: convertDataFromText(combinedRelation), explanation: explanation };
             }
         }
     }
@@ -816,7 +845,12 @@ addLoadEvent(function () { buttons("text") });
 function displayResult(id, result, expression) {
     let html = "";
     if (result.type == 'result') {
-        html += '<div><table class="table table-striped">';
+        html += '<div>';
+        html += '<h5 style="text-align: center;">';
+        html += result.explanation;
+        html += '</h5>';
+
+        html += '<table class="table table-striped">';
         html += "<tr>";
         for (let i = 0; i < result.relation.header.length; i++) {
             html += "<th>" + result.relation.header[i] + "</th>"
