@@ -110,7 +110,7 @@ function findOperation(tokenizedExpression, operation) {
 
 let relations = [
     {
-        name: 'oseba', header: ['ID', 'Ime', 'Rojen', 'SID'], types: ['number', 'string', 'date', 'number'],
+        name: 'oseba', header: ['ID', 'Ime', 'Rojen', 'SID'], types: ['number', 'string', 'date', 'number'], shortName: 'o',
         data: [
             [1, "Jill", "1990-03-09", 1],
             [2, "Jack", "1950-06-02", 1],
@@ -122,7 +122,7 @@ let relations = [
         ]
     },
     {
-        name: 'facebook', header: ['OID', 'PID'], types: ['number', 'number'],
+        name: 'facebook', header: ['OID', 'PID'], types: ['number', 'number'], shortName: 'f',
         data: [
             [1, 2],
             [2, 1],
@@ -135,7 +135,7 @@ let relations = [
         ]
     },
     {
-        name: 'twitter', header: ['OID', 'SID'], types: ['number', 'number'],
+        name: 'twitter', header: ['OID', 'SID'], types: ['number', 'number'], shortName: 't',
         data: [
             [1, 2],
             [3, 2],
@@ -144,7 +144,7 @@ let relations = [
         ]
     },
     {
-        name: 'stan', header: ['SID', 'Stan'], types: ['number', 'string'],
+        name: 'stan', header: ['SID', 'Stan'], types: ['number', 'string'], shortName: 's',
         data: [
             [1, "Razmerje"],
             [2, "Zakonski"],
@@ -169,10 +169,19 @@ function convertDataFromText(relation) {
     return { name: relation.name, header: relation.header, types: relation.types, data: rows };
 }
 
+function compareRelationAndToken(relation, token) {
+    let lowerName1 = relation.name.toLowerCase();
+    let lowerName2 = token.toLowerCase();
+    if (lowerName1 == lowerName2) {return true;}
+    lowerName1 = relation.shortName.toLowerCase();
+    if (lowerName1 == lowerName2) {return true;}
+    return false;
+}
+
 function insertValue(tokenizedExpression) {
     if (tokenizedExpression.length == 1 && (tokenizedExpression[0].type == "word" || tokenizedExpression[0].type == '"')) {
         for (let i = 0; i < relations.length; i++) {
-            if (relations[i].name == tokenizedExpression[0].token) {
+            if (compareRelationAndToken(relations[i], tokenizedExpression[0].token)) {
                 let explanation = '<span class="variable">' + relations[i].name + "</span>";
                 return { type: 'result', relation: relations[i], explanation: explanation }
             }
@@ -270,8 +279,9 @@ function logicExpression(expression, variables, startPosition) {
     }
 
     if (tokenizedExpression.length == 1 && tokenizedExpression[0].type == "word") {
-        if (tokenizedExpression[0].token in variables) {
-            return { type: 'numericValue', value: variables[tokenizedExpression[0].token] }
+        let variable = convertTokenToVariableName(Object.keys(variables), tokenizedExpression[0].token);
+        if (variable in variables) {
+            return { type: 'numericValue', value: variables[variable] }
         }
         if (isNumeric(tokenizedExpression[0].token)) {
             return { type: 'numericValue', value: parseFloat(tokenizedExpression[0].token) }
@@ -290,6 +300,15 @@ function logicExpression(expression, variables, startPosition) {
     }
 
     return { type: 'error', description: 'Neznana operacija/spremenljivka', location: startPosition }
+}
+
+function convertTokenToVariableName(variableNames, token) {
+    for (let i = 0; i < variableNames.length; i++) {
+        if (variableNames[i].toLowerCase() == token.toLowerCase()) {
+            return variableNames[i];
+        }
+    }
+    return token;
 }
 
 function isNumeric(str) {
@@ -432,8 +451,8 @@ function convertRow(row, header, columnNames) {
 // }
 
 function aggregation(relation, columnNames, functions) {
-    let columnNamesForGroups = columnNames.map(name => name.token);
-    let columnTypesForGroups = columnNames.map(name => relation.types[relation.header.indexOf(name.token)]);
+    let columnNamesForGroups = columnNames.map(name => convertTokenToVariableName(relation.header, name.token));
+    let columnTypesForGroups = columnNamesForGroups.map(name => relation.types[relation.header.indexOf(name)]);
     let groups = [""];
     if (columnNames.length > 0) {
         groups = Array.from(new Set(relation.data.map(row => { return convertRow(row, relation.header, columnNamesForGroups) })));
@@ -449,13 +468,14 @@ function aggregation(relation, columnNames, functions) {
             return { type: 'error', description: 'Vsaka agregacijska funkcija potrebuje parametre', location: functions[i].location };
         }
         if (functions[i].type == "word" && (functions[i + 1].type == "(" || functions[i + 1].type == "word")) {
-            if (validFunctions.includes(functions[i].token)) {
-                functionName.push(functions[i].token)
+            if (validFunctions.includes(functions[i].token.toUpperCase())) {
+                functionName.push(functions[i].token.toUpperCase())
             } else {
                 return { type: 'error', description: 'Neveljavno ime agregacijske funkcije: ' + functions[i].token, location: functions[i].location };
             }
-            if (validColumns.includes(functions[i + 1].token)) {
-                functionParametersIndexes.push(validColumns.indexOf(functions[i + 1].token))
+            let agregationOverColumn = convertTokenToVariableName(validColumns, functions[i + 1].token);
+            if (validColumns.includes(agregationOverColumn)) {
+                functionParametersIndexes.push(validColumns.indexOf(agregationOverColumn))
             } else {
                 return { type: 'error', description: 'Neveljavno ime atributa: ' + functions[i + 1].token, location: functions[i + 1].location };
             }
@@ -499,6 +519,8 @@ function aggregation(relation, columnNames, functions) {
             } else if (aggregationFunction == "COUNT") {
                 result = 0;
                 values.forEach(v => { if (v != null) { result++; } })
+            } else {
+
             }
 
             row.push(result);
@@ -569,9 +591,10 @@ function applySimpleOperations(tokenizedExpression) {
                 if (tokens.type == 'error') { return tokens; }
                 tokens = tokens.tokens;
                 for (let j = 0; j < tokens.length; j++) {
-                    if (columnNames.includes(tokens[j].token)) {
-                        includedColumns.push(tokens[j].token);
-                        includedColumnIndex.push(columnNames.indexOf(tokens[j].token));
+                    let convertedToken = convertTokenToVariableName(columnNames, tokens[j].token);
+                    if (columnNames.includes(convertedToken)) {
+                        includedColumns.push(convertedToken);
+                        includedColumnIndex.push(columnNames.indexOf(convertedToken));
                     } else {
                         return { type: 'error', description: 'Neveljavno ime stolpca', location: tokens[j].location };
                     }
