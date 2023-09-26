@@ -25,7 +25,7 @@ let relations = [
             [8, 9],
             [10, 9],
             [4, 9],
-            [6, 9],
+            [6, 9]
         ]
     },
     {
@@ -40,7 +40,7 @@ let relations = [
             [7, "2001-01-02", "For much of the last phase of his ac...", 1, 1],
             [8, "2001-01-02", "he enrolled in the mathematics and p...", 2, 2],
             [9, "2001-01-02", "Horrified by the Nazi war of extermi...", 3, 3],
-            [10, "2001-01-02", "Einstein supported the Allies but ge...", 1, 2],
+            [10, "2001-01-02", "Einstein supported the Allies but ge...", 1, 2]
         ]
     }
 ]
