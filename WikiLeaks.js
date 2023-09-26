@@ -1,4 +1,4 @@
-let relations = [
+relations = [
     {
         name: 'privacy', header: ['PID', 'Privacy'], types: ['number', 'string'], shortName: 'p',
         data: [
