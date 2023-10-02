@@ -1,6 +1,6 @@
 relations = [
     {
-        name: 'studenti', header: ['SID', 'Ime'], types: ['number', 'string'], shortName: 's',
+        name: 'studenti', header: ['SID', 'ImeStudenta'], types: ['number', 'string'], shortName: 's',
         data: [
             [1, "Franc"],
             [2, "Marija"],
@@ -28,7 +28,7 @@ relations = [
         ]
     },
     {
-        name: 'predmeti', header: ['PID', 'Ime'], types: ['number', 'string'], shortName: 'p',
+        name: 'predmeti', header: ['PID', 'ImePredmeta'], types: ['number', 'string'], shortName: 'p',
         data: [
             [1, "OPB"],
             [2, "LA"],
