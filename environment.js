@@ -73,6 +73,7 @@ function loadDomain(domain) {
     client.open('GET', 'https://raw.githubusercontent.com/TimotejK/OPB-LA/main/' + domain + '.js');
     client.onreadystatechange = function() {
         let js = client.responseText;
+        console.log(js);
         eval(js);
         describeRelations();
     }

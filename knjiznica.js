@@ -1,6 +1,6 @@
 // TODO tooltip za vsako operacijo
 // TODO operacije -, /, ▷, ←
-// TODO dodaj ostale domene
+// TODO operacije bi lahko podprli za logične izraze +-*/
 
 let maxNumberOfLines = 1000;
 
@@ -33,7 +33,7 @@ function findMatchingParenthesis(expression, firstLocation, open, close, startin
     return { type: 'result', tokenStart: firstLocation, tokenEnd: i }
 }
 
-let operationsForTokenization = ['π', 'σ', 'ρ', 'τ', '⨯', '⨝', '⋉', '⋊', '∩', '∪',
+let operationsForTokenization = ['π', 'σ', 'ρ', 'τ', '⨯', '⨝', '⋉', '⋊', '∩', '∪', '/', '-',
     '∧', '∨', '¬', '=', '≠', '≤', '≥', '<', '>'];
 
 function tokenize(expression, startPosition) {
@@ -394,72 +394,6 @@ function join(relation1, relation2, conditionToken, leftOuter, rightOuter, newNa
     return validateRelation(combinedRelation);
 }
 
-function op(operator, relation1, relation2, parametersToken) {
-    let newName = relation1.name + operator + relation2.name;
-    if (operator == "⨯") {
-        let combinedRelation = {};
-        let combinedData = [];
-        for (let a = 0; a < relation1.data.length; a++) {
-            for (let b = 0; b < relation2.data.length; b++) {
-                combinedData.push(relation1.data[a].concat(relation2.data[b]));
-            }
-        }
-        combinedRelation.types = relation1.types.concat(relation2.types);
-        combinedRelation.header = relation1.header.concat(relation2.header);
-        combinedRelation.data = combinedData;
-        combinedRelation.name = newName;
-        return { type: 'result', relation: validateRelation(combinedRelation) };
-    }
-
-    if (operator == "⨝" && !parametersToken) {
-        let combinedRelation = {};
-        let combinedData = [];
-        for (let a = 0; a < relation1.data.length; a++) {
-            for (let b = 0; b < relation2.data.length; b++) {
-                let parameters = {};
-                let equal = true;
-                for (let i = 0; i < relation1.data[a].length; i++) {
-                    parameters[relation1.header[i]] = relation1.data[a][i];
-                }
-                let secondRow = [];
-                for (let i = 0; i < relation2.data[b].length; i++) {
-                    if (relation2.header[i] in parameters) {
-                        if (parameters[relation2.header[i]] != relation2.data[b][i]) {
-                            equal = false;
-                        }
-                    } else {
-                        secondRow.push(relation2.data[b][i])
-                    }
-                }
-                if (equal) {
-                    combinedData.push(relation1.data[a].concat(secondRow));
-                }
-            }
-        }
-        combinedRelation.types = relation1.types.concat(relation2.types);
-        combinedRelation.header = relation1.header.concat(relation2.header.filter(el => !relation1.header.includes(el)));
-        combinedRelation.data = combinedData;
-        combinedRelation.name = newName;
-        return { type: 'result', relation: validateRelation(combinedRelation) };
-    }
-
-    if (operator == "⨝" && parametersToken) {
-        let combinedRelation = join(relation1, relation2, parametersToken, false, false, newName);
-        if (combinedRelation.type == 'error') { return combinedRelation; }
-        else { return { type: 'result', relation: combinedRelation }; }
-    }
-    if (operator == "⋊" && parametersToken) {
-        let combinedRelation = join(relation1, relation2, parametersToken, true, false, newName);
-        if (combinedRelation.type == 'error') { return combinedRelation; }
-        else { return { type: 'result', relation: combinedRelation }; }
-    }
-    if (operator == "⋉" && parametersToken) {
-        let combinedRelation = join(relation1, relation2, parametersToken, false, true, newName);
-        if (combinedRelation.type == 'error') { return combinedRelation; }
-        else { return { type: 'result', relation: combinedRelation }; }
-    }
-}
-
 function convertRow(row, header, columnNames) {
     let values = [];
     for (let i = 0; i < header.length; i++) {
@@ -610,37 +544,7 @@ function applySimpleOperations(tokenizedExpression) {
             let newName = operator + rightSide.relation.name;
             let explanation = '<span class="operator">' + operator + "</span><sub>" + found.parametersAfter.token + "</sub> (" + rightSide.explanation + ")";
             if (operator == "π") {
-                let columnNames = rightSide.relation.header;
-                let includedColumns = [];
-                let includedColumnIndex = [];
-                let tokens = tokenize(found.parametersAfter.token, found.parametersAfter.location);
-                if (tokens.type == 'error') { return tokens; }
-                tokens = tokens.tokens;
-                for (let j = 0; j < tokens.length; j++) {
-                    let convertedToken = convertTokenToVariableName(columnNames, tokens[j].token);
-                    if (columnNames.includes(convertedToken)) {
-                        includedColumns.push(convertedToken);
-                        includedColumnIndex.push(columnNames.indexOf(convertedToken));
-                    } else {
-                        return { type: 'error', description: 'Neveljavno ime stolpca', location: tokens[j].location };
-                    }
-                }
-
-                let newData = [];
-                for (let j = 0; j < rightSide.relation.data.length; j++) {
-                    let row = [];
-                    for (let k = 0; k < includedColumnIndex.length; k++) {
-                        row.push(rightSide.relation.data[j][includedColumnIndex[k]]);
-                    }
-                    newData.push(row);
-                }
-                let types = [];
-                for (let k = 0; k < includedColumnIndex.length; k++) {
-                    types.push(rightSide.relation.types[includedColumnIndex[k]]);
-                }
-
-                let newRelation = { types: types, header: includedColumns, data: newData, name: newName };
-                return { type: 'result', relation: validateRelation(newRelation), explanation:explanation };
+                return projection(rightSide, found.parametersAfter);
             }
 
             if (operator == "σ") {
@@ -735,7 +639,7 @@ function applySimpleOperations(tokenizedExpression) {
 }
 
 function applyDoubleOperations(tokenizedExpression) {
-    let operations = ["∪", "∩", "⨯", "⨝", "⋊", "⋉"];
+    let operations = ["∪", "∩", "-", "/", "⨯", "⨝", "⋊", "⋉"];
     for (let i = 0; i < operations.length; i++) {
         let operator = operations[i];
         let found = findOperation(tokenizedExpression, operator);
@@ -764,9 +668,11 @@ function applyDoubleOperations(tokenizedExpression) {
                 let explanation = "(" + leftSide.explanation + ') <span class="operator">' + operator + "</span>" + 
                 (found.parametersAfter ? "<sub>" + found.parametersAfter.token + "</sub>" : "") + 
                 " (" + rightSide.explanation + ")";
-                let result = op(operator, leftSide.relation, rightSide.relation, found.parametersAfter)
+                let result = joinOperations(operator, leftSide.relation, rightSide.relation, found.parametersAfter)
                 result.explanation = explanation;
                 return result;
+            } else if (operator == "/") {
+                return division(leftSide, rightSide);
             }
 
             // check if types are correct
@@ -789,6 +695,8 @@ function applyDoubleOperations(tokenizedExpression) {
                 combinedRelation.data = leftRelation.data.filter(value => rightRelation.data.includes(value));
                 combinedRelation.name = leftRelation.name + operator + rightRelation.name;
                 return { type: 'result', relation: convertDataFromText(combinedRelation), explanation: explanation };
+            } else if (operator == "-") {
+                return diference(leftSide, rightSide);
             }
         }
     }
