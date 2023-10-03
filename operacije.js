@@ -185,11 +185,16 @@ function join(relation1, relation2, conditionToken, leftOuter, rightOuter, newNa
     return validateRelation(combinedRelation);
 }
 
-function division(result1, result2) {
+function division(result1, result2, location) {
     let relation1 = result1.relation;
     let relation2 = result2.relation;
     let columns1 = relation1.header;
     let columns2 = relation2.header;
+    
+    if (columns2.filter(el => !columns1.includes(el)).length > 0) {
+        return { type: 'error', description: 'Atributi desne relacije morajo biti podmnožica atributov leve relacije.', location: location, locationEnd: location + 1 };
+    }
+
     let finalColumns = columns1.filter(value => !columns2.includes(value))
     let finalColumnsToken = { token: Array.from(finalColumns).join(", "), type: 'word', location: 0, locationEnd: 1 }
     
@@ -197,5 +202,13 @@ function division(result1, result2) {
     let r1 = joinOperations("⨯", p1.relation, result2.relation, null, null);
     let r2 = diference(r1, result1);
     let p2 = projection(r2, finalColumnsToken);
-    return diference(p1, p2);
+    let d1 = diference(p1, p2);
+    if (d1.type == 'error') {
+        return { type: 'error', description: 'Napaka pri izračunu deljenja.', location: location, locationEnd: location + 1 };
+    }
+    let newName = result1.relation.name + "/" + result2.relation.name;
+    let explanation = "(" + result1.explanation + ') <span class="operator">' + "/" + "</span> (" + result2.explanation + ")";
+    d1.relation.name = newName;
+    d1.explanation = explanation;
+    return d1;
 }

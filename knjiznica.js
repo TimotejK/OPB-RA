@@ -619,7 +619,7 @@ function applyDoubleOperations(tokenizedExpression) {
                 result.explanation = explanation;
                 return result;
             } else if (operator == "/") {
-                return division(leftSide, rightSide);
+                return division(leftSide, rightSide, found.operationToken.location);
             }
 
             // check if types are correct
