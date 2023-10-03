@@ -20,18 +20,31 @@ function describeRelations() {
 
 
 function bootstrapButtons() {
+    let groupSizes = [4, 6, 5, 5, 4, 0];
     let html = '';
     html += '<div class="btn-toolbar" role="toolbar">';
-    html += '<div class="btn-group" role="group" aria-label="Operacije">';
-    for (let i = 0; i < 10; i++) {
-        html += '<button type="button" class="btn btn-outline-secondary" onclick="addSymbol(\'' + operationsForTokenization[i] + '\')">' + operationsForTokenization[i] + '</button>';
+    let start = 0; end = groupSizes[0];
+    for (let size = 0; size < groupSizes.length; size++) {
+        html += '<div class="btn-group" role="group" aria-label="Operacije">';
+        for (let i = start; i < end; i++) {
+            let tooltiptext = '<span class="buttontiptext">';
+            if (operationDescriptions.length > i) {
+                tooltiptext += operationDescriptions[i].name + '<br />';
+                for (let j = 0; j < operationDescriptions[i].examples.length; j++) {
+                    tooltiptext += operationDescriptions[i].examples[j] + '<br />';
+                }
+            }
+            tooltiptext += '</span>';
+
+            html += '<button type="button" class="btn btn-outline-secondary buttontip" onclick="addSymbol(\'' + operationsForTokenization[i] + '\')">' + 
+            operationsForTokenization[i] + 
+            tooltiptext +
+            '</button>';
+        }
+        html += '</div>';
+        start += groupSizes[size];
+        end += groupSizes[size + 1];
     }
-    html += '</div>';
-    html += '<div class="btn-group" role="group" aria-label="Operacije">';
-    for (let i = 10; i < operationsForTokenization.length; i++) {
-        html += '<button type="button" class="btn btn-outline-secondary" onclick="addSymbol(\'' + operationsForTokenization[i] + '\')">' + operationsForTokenization[i] + '</button>';
-    }
-    html += '</div>';
     html += '</div>';
     document.getElementById('operationButtons').innerHTML = html;
 }

@@ -40,6 +40,24 @@ function findMatchingParenthesis(expression, firstLocation, open, close, startin
 let operationsForTokenization = ['π', 'σ', 'ρ', 'τ', '⨯', '⨝', '⋉', '⋊', '⟗', '▷', '∩', '∪', '/', '-', '←',
     '∧', '∨', '¬', '=', '≠', '≤', '≥', '<', '>'];
 
+let operationDescriptions = [
+    {name: "Projekcija", examples: ["π[A, B](r)"]},
+    {name: "Selekcija", examples: ["σ[A > 3](r)"]},
+    {name: "Preimenovanje", examples: ["ρ[q(C, D)](r)"]},
+    {name: "Agregacija", examples: ["τ[COUNT A](r)", "[A]τ[MAX B](r)"]},
+    {name: "Skalarni produkt", examples: ["r ⨯ q"]},
+    {name: "Naravni in pogojni stik", examples: ["r ⨝ q", "r ⨝[A = C] q"]},
+    {name: "Desno odprti stik stik", examples: ["r ⋉ q", "r ⋉[A = C] q"]},
+    {name: "Levo odprti stik stik", examples: ["r ⋊ q", "r ⋊[A = C] q"]},
+    {name: "Odprti stik stik", examples: ["r ⟗ q", "r ⟗[A = C] q"]},
+    {name: "Pol-stik", examples: ["r ▷ q", "r ▷[A = C] q"]},
+    {name: "Presek", examples: ["r ∩ q"]},
+    {name: "Unija", examples: ["r ∪ q"]},
+    {name: "Deljenje", examples: ["r / q"]},
+    {name: "Razlika", examples: ["r - q"]},
+    {name: "Prirejanje vrednosti", examples: ["spremenljivka ← r"]}
+]
+
 function tokenize(expression, startPosition) {
     if (Array.isArray(expression)) {
         return { type: 'tokenizationResult', tokens: expression };
