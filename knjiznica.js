@@ -829,12 +829,15 @@ function displayResult(id, result, expression) {
 }
 
 function runExpresionSequence(expressionsString, id) {
+    let relationsOld = [...relations];
     let expressions = expressionsString.split("\n");
     for (let i = 0; i < expressions.length; i++) {
+        if (expressions[i].trim().length == 0) {continue;}
         result = evaluateExpression(expressions[i], 0);
         console.log(result);
         displayResult(id, result, expressions[i])
     }
+    relations = relationsOld;
 }
 
 function runEvaluation(id) {
