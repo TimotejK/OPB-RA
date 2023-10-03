@@ -1,7 +1,3 @@
-// TODO tooltip za vsako operacijo
-// TODO operacije -, /, ▷, ←
-// TODO operacije bi lahko podprli za logične izraze +-*/
-
 let maxNumberOfLines = 1000;
 
 function insertAlternativeSymbols(expression) {
@@ -44,18 +40,28 @@ let operationDescriptions = [
     {name: "Projekcija", examples: ["π[A, B](r)"]},
     {name: "Selekcija", examples: ["σ[A > 3](r)"]},
     {name: "Preimenovanje", examples: ["ρ[q(C, D)](r)"]},
-    {name: "Agregacija", examples: ["τ[COUNT A](r)", "[A]τ[MAX B](r)"]},
+    {name: "Agregacija in grupiranje", examples: ["τ[COUNT A](r)", "[A]τ[MAX B](r)"]},
     {name: "Skalarni produkt", examples: ["r ⨯ q"]},
     {name: "Naravni in pogojni stik", examples: ["r ⨝ q", "r ⨝[A = C] q"]},
-    {name: "Desno odprti stik stik", examples: ["r ⋉ q", "r ⋉[A = C] q"]},
-    {name: "Levo odprti stik stik", examples: ["r ⋊ q", "r ⋊[A = C] q"]},
-    {name: "Odprti stik stik", examples: ["r ⟗ q", "r ⟗[A = C] q"]},
+    {name: "Desno odprti stik", examples: ["r ⋉ q", "r ⋉[A = C] q"]},
+    {name: "Levo odprti stik", examples: ["r ⋊ q", "r ⋊[A = C] q"]},
+    {name: "Odprti stik", examples: ["r ⟗ q", "r ⟗[A = C] q"]},
     {name: "Pol-stik", examples: ["r ▷ q", "r ▷[A = C] q"]},
     {name: "Presek", examples: ["r ∩ q"]},
     {name: "Unija", examples: ["r ∪ q"]},
     {name: "Deljenje", examples: ["r / q"]},
     {name: "Razlika", examples: ["r - q"]},
-    {name: "Prirejanje vrednosti", examples: ["spremenljivka ← r"]}
+    {name: "Prirejanje vrednosti", examples: ["spremenljivka ← r"]},
+    
+    {name: "Konjunkcija", examples: ["a ∧ b"]},
+    {name: "Disjunkcija", examples: ["a ∨ b"]},
+    {name: "Negacija", examples: ["¬a"]},
+    {name: "Je enako", examples: ["a = b"]},
+    {name: "Ni enako", examples: ["a ≠ b"]},
+    {name: "Manjše ali enako", examples: ["a ≤ b"]},
+    {name: "Večje ali enako", examples: ["a ≥ b"]},
+    {name: "Manjše", examples: ["a < b"]},
+    {name: "Večje", examples: ["a > b"]},
 ]
 
 function tokenize(expression, startPosition) {
