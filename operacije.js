@@ -81,6 +81,14 @@ function joinOperations(operator, relation1, relation2, parametersToken, operati
         if (combinedRelation.type == 'error') { return combinedRelation; }
         else { return { type: 'result', relation: combinedRelation }; }
     }
+    if (operator == "▷") {
+        let combinedRelation = join(relation1, relation2, parametersToken, false, false, newName);
+        if (combinedRelation.type == 'error') { return combinedRelation; }
+
+        let finalColumnsToken = { token: Array.from(relation1.header).join(", "), type: 'word', location: 0, locationEnd: 1 }
+        let p1 = projection({ type: 'result', relation: combinedRelation }, finalColumnsToken);
+        return { type: 'result', relation: p1.relation };
+    }
     return { type: 'error', description: 'Manjkajo parametri operacije', location: operationToken.location, locationEnd: operationToken.locationEnd }
 }
 

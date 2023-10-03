@@ -37,7 +37,7 @@ function findMatchingParenthesis(expression, firstLocation, open, close, startin
     return { type: 'result', tokenStart: firstLocation, tokenEnd: i }
 }
 
-let operationsForTokenization = ['π', 'σ', 'ρ', 'τ', '⨯', '⨝', '⋉', '⋊', '⟗', '∩', '∪', '/', '-',
+let operationsForTokenization = ['π', 'σ', 'ρ', 'τ', '⨯', '⨝', '⋉', '⋊', '⟗', '▷', '∩', '∪', '/', '-',
     '∧', '∨', '¬', '=', '≠', '≤', '≥', '<', '>'];
 
 function tokenize(expression, startPosition) {
@@ -586,7 +586,7 @@ function applySimpleOperations(tokenizedExpression) {
 }
 
 function applyDoubleOperations(tokenizedExpression) {
-    let operations = ["∪", "∩", "-", "/", "⨯", "⨝", "⋊", "⋉", "⟗"];
+    let operations = ["∪", "∩", "-", "/", "⨯", "⨝", "⋊", "⋉", "⟗", "▷"];
     for (let i = 0; i < operations.length; i++) {
         let operator = operations[i];
         let found = findOperation(tokenizedExpression, operator);
@@ -594,7 +594,7 @@ function applyDoubleOperations(tokenizedExpression) {
             if (found.parametersBefore != null) {
                 return { type: 'error', description: 'Odvečni parametri pred operacijo', location: found.parametersBefore.location, locationEnd: found.parametersBefore.locationEnd }
             }
-            if (operator != "⨝" && operator != "⋉" && operator != "⋊" && operator != "⟗" && found.parametersAfter != null) {
+            if (operator != "⨝" && operator != "⋉" && operator != "⋊" && operator != "⟗"  && operator != "▷" && found.parametersAfter != null) {
                 return { type: 'error', description: 'Odvečni parametri po operaciji', location: found.parametersAfter.location, locationEnd: found.parametersAfter.locationEnd }
             }
             if (found.expressionBefore == null || found.expressionBefore.length == 0) {
@@ -611,7 +611,7 @@ function applyDoubleOperations(tokenizedExpression) {
             if (rightSide.type != 'result') return { type: 'error', description: 'Napaka desno od operacije', location: found.operationToken.location, locationEnd: found.operationToken.locationEnd };
 
             // product
-            if (operator == "⨯" || operator == "⨝" || operator == "⋉" || operator == "⋊" || operator == "⟗") {
+            if (operator == "⨯" || operator == "⨝" || operator == "⋉" || operator == "⋊" || operator == "⟗" || operator == "▷") {
                 let explanation = "(" + leftSide.explanation + ') <span class="operator">' + operator + "</span>" + 
                 (found.parametersAfter ? "<sub>" + found.parametersAfter.token + "</sub>" : "") + 
                 " (" + rightSide.explanation + ")";
