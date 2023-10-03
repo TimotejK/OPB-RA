@@ -37,7 +37,7 @@ function findMatchingParenthesis(expression, firstLocation, open, close, startin
     return { type: 'result', tokenStart: firstLocation, tokenEnd: i }
 }
 
-let operationsForTokenization = ['π', 'σ', 'ρ', 'τ', '⨯', '⨝', '⋉', '⋊', '⟗', '▷', '∩', '∪', '/', '-',
+let operationsForTokenization = ['π', 'σ', 'ρ', 'τ', '⨯', '⨝', '⋉', '⋊', '⟗', '▷', '∩', '∪', '/', '-', '←',
     '∧', '∨', '¬', '=', '≠', '≤', '≥', '<', '>'];
 
 function tokenize(expression, startPosition) {
@@ -586,7 +586,7 @@ function applySimpleOperations(tokenizedExpression) {
 }
 
 function applyDoubleOperations(tokenizedExpression) {
-    let operations = ["∪", "∩", "-", "/", "⨯", "⨝", "⋊", "⋉", "⟗", "▷"];
+    let operations = ["←", "∪", "∩", "-", "/", "⨯", "⨝", "⋊", "⋉", "⟗", "▷"];
     for (let i = 0; i < operations.length; i++) {
         let operator = operations[i];
         let found = findOperation(tokenizedExpression, operator);
@@ -603,12 +603,26 @@ function applyDoubleOperations(tokenizedExpression) {
             if (found.expressionAfter == null || found.expressionAfter.length == 0) {
                 return { type: 'error', description: 'Manjka desna stran izraza', location: found.operationToken.location, locationEnd: found.operationToken.locationEnd }
             }
-            let leftSide = evaluateExpression(found.expressionBefore, null);
-            if (leftSide.type == 'error') return leftSide;
-            if (leftSide.type != 'result') return { type: 'error', description: 'Napaka levo od operacije', location: found.operationToken.location, locationEnd: found.operationToken.locationEnd };
+            
             let rightSide = evaluateExpression(found.expressionAfter, null);
             if (rightSide.type == 'error') return rightSide;
             if (rightSide.type != 'result') return { type: 'error', description: 'Napaka desno od operacije', location: found.operationToken.location, locationEnd: found.operationToken.locationEnd };
+
+            if (operator == "←") {
+                if (found.expressionBefore.length != 1 || (found.expressionBefore[0].type != "word" && found.expressionBefore[0].type != '"')) {
+                    return { type: 'error', description: 'Na levi strani prirejanja vrednosti mora biti ime spremenljivke', location: found.operationToken.location, locationEnd: found.operationToken.locationEnd }
+                }
+                let relationName = found.expressionBefore[0].token;
+                let relation = rightSide.relation;
+                relation.name = relationName;
+                relation.shortName = relationName;
+                relations.push(relation);
+                return rightSide;
+            }
+            
+            let leftSide = evaluateExpression(found.expressionBefore, null);
+            if (leftSide.type == 'error') return leftSide;
+            if (leftSide.type != 'result') return { type: 'error', description: 'Napaka levo od operacije', location: found.operationToken.location, locationEnd: found.operationToken.locationEnd };
 
             // product
             if (operator == "⨯" || operator == "⨝" || operator == "⋉" || operator == "⋊" || operator == "⟗" || operator == "▷") {
@@ -790,12 +804,17 @@ function displayResult(id, result, expression) {
     document.getElementById('results').innerHTML = html;
 }
 
+function runExpresionSequence(expressionsString, id) {
+    let expressions = expressionsString.split("\n");
+    for (let i = 0; i < expressions.length; i++) {
+        result = evaluateExpression(expressions[i], 0);
+        console.log(result);
+        displayResult(id, result, expressions[i])
+    }
+}
+
 function runEvaluation(id) {
     let expression = document.getElementById(id).value
-    expression = insertAlternativeSymbols(expression);
-    let result = evaluateExpression(expression, 0);
-    console.log(result);
-    displayResult(id, result, expression)
-    // if (result.type == 'error') {
-    // }
+    expression = insertAlternativeSymbols(expression, id);
+    runExpresionSequence(expression);
 }
