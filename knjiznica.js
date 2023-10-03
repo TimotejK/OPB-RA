@@ -8,6 +8,10 @@ function insertAlternativeSymbols(expression) {
     expression = expression.replaceAll('×', '⨯');
     expression = expression.replaceAll(' x ', ' ⨯ ');
     expression = expression.replaceAll(' U ', ' ∪ ');
+    expression = expression.replaceAll('<=', '≤');
+    expression = expression.replaceAll('>=', '≥');
+    expression = expression.replaceAll('!=', '≠');
+    expression = expression.replaceAll('!', '¬');
     return expression;
 }
 
@@ -333,67 +337,6 @@ function isNumeric(str) {
     if (typeof str != "string") return false // we only process strings!  
     return !isNaN(str) && // use type coercion to parse the _entirety_ of the string (`parseFloat` alone does not do this)...
         !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
-}
-
-function join(relation1, relation2, conditionToken, leftOuter, rightOuter, newName) {
-    let combinedRelation = {};
-    let combinedData = [];
-    let used1 = new Array(relation1.data.length).fill(false);
-    let used2 = new Array(relation2.data.length).fill(false);
-
-    mainLoop:
-    for (let a = 0; a < relation1.data.length; a++) {
-        for (let b = 0; b < relation2.data.length; b++) {
-            let parameters = {};
-            for (let i = 0; i < relation1.data[a].length; i++) {
-                parameters[relation1.header[i]] = relation1.data[a][i];
-                parameters[relation1.name + "." + relation1.header[i]] = relation1.data[a][i];
-            }
-            for (let i = 0; i < relation2.data[b].length; i++) {
-                parameters[relation2.header[i]] = relation2.data[b][i];
-                parameters[relation2.name + "." + relation2.header[i]] = relation2.data[b][i];
-            }
-            let result = logicExpression(conditionToken.token, parameters, conditionToken.location)
-            if (result.type == 'error') { return result; }
-            if (result.type != 'logicValue') { return { type: 'error', description: 'Pogoj mora vrniti logično vrednost', location: conditionToken.location, locationEnd: conditionToken.locationEnd }; }
-            if (result.value) {
-                if (combinedData.length > maxNumberOfLines) {
-                    break mainLoop;
-                }
-                combinedData.push(relation1.data[a].concat(relation2.data[b]));
-                used1[a] = true;
-                used2[b] = true;
-            }
-        }
-    }
-
-    // add null values for outer joins
-    if (leftOuter) {
-        for (let i = 0; i < used1.length; i++) {
-            if (!used1[i]) {
-                if (combinedData.length > maxNumberOfLines) {
-                    break;
-                }
-                combinedData.push(relation1.data[i].concat(new Array(relation2.header.length).fill(null)));
-            }
-        }
-    }
-    if (rightOuter) {
-        for (let i = 0; i < used2.length; i++) {
-            if (!used2[i]) {
-                if (combinedData.length > maxNumberOfLines) {
-                    break;
-                }
-                combinedData.push(new Array(relation1.header.length).fill(null).concat(relation2.data[i]));
-            }
-        }
-    }
-
-    combinedRelation.types = relation1.types.concat(relation2.types);
-    combinedRelation.header = relation1.header.concat(relation2.header);
-    combinedRelation.data = combinedData;
-    combinedRelation.name = newName;
-    return validateRelation(combinedRelation);
 }
 
 function convertRow(row, header, columnNames) {

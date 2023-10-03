@@ -61,17 +61,60 @@ function joinOperations(operator, relation1, relation2, parametersToken, operati
         return { type: 'result', relation: validateRelation(combinedRelation) };
     }
 
-    if (operator == "⨝" && !parametersToken) {
-        let combinedRelation = {};
-        let combinedData = [];
-        for (let a = 0; a < relation1.data.length; a++) {
-            for (let b = 0; b < relation2.data.length; b++) {
-                let parameters = {};
-                let equal = true;
-                for (let i = 0; i < relation1.data[a].length; i++) {
-                    parameters[relation1.header[i]] = relation1.data[a][i];
+    if (operator == "⨝") {
+        let combinedRelation = join(relation1, relation2, parametersToken, false, false, newName);
+        if (combinedRelation.type == 'error') { return combinedRelation; }
+        else { return { type: 'result', relation: combinedRelation }; }
+    }
+    if (operator == "⋊") {
+        let combinedRelation = join(relation1, relation2, parametersToken, true, false, newName);
+        if (combinedRelation.type == 'error') { return combinedRelation; }
+        else { return { type: 'result', relation: combinedRelation }; }
+    }
+    if (operator == "⋉") {
+        let combinedRelation = join(relation1, relation2, parametersToken, false, true, newName);
+        if (combinedRelation.type == 'error') { return combinedRelation; }
+        else { return { type: 'result', relation: combinedRelation }; }
+    }
+    if (operator == "⟗") {
+        let combinedRelation = join(relation1, relation2, parametersToken, true, true, newName);
+        if (combinedRelation.type == 'error') { return combinedRelation; }
+        else { return { type: 'result', relation: combinedRelation }; }
+    }
+    return { type: 'error', description: 'Manjkajo parametri operacije', location: operationToken.location, locationEnd: operationToken.locationEnd }
+}
+
+function join(relation1, relation2, conditionToken, leftOuter, rightOuter, newName) {
+    let combinedRelation = {};
+    let combinedData = [];
+    let used1 = new Array(relation1.data.length).fill(false);
+    let used2 = new Array(relation2.data.length).fill(false);
+
+    mainLoop:
+    for (let a = 0; a < relation1.data.length; a++) {
+        for (let b = 0; b < relation2.data.length; b++) {
+            let parameters = {};
+            for (let i = 0; i < relation1.data[a].length; i++) {
+                parameters[relation1.header[i]] = relation1.data[a][i];
+                parameters[relation1.name + "." + relation1.header[i]] = relation1.data[a][i];
+            }
+            let includeRow = false;
+            let rowToInclude = [];
+            if (conditionToken) {
+                // Pogojni stik
+                for (let i = 0; i < relation2.data[b].length; i++) {
+                    parameters[relation2.header[i]] = relation2.data[b][i];
+                    parameters[relation2.name + "." + relation2.header[i]] = relation2.data[b][i];
                 }
-                let secondRow = [];
+                let result = logicExpression(conditionToken.token, parameters, conditionToken.location)
+                if (result.type == 'error') { return result; }
+                if (result.type != 'logicValue') { return { type: 'error', description: 'Pogoj mora vrniti logično vrednost', location: conditionToken.location, locationEnd: conditionToken.locationEnd }; }
+                includeRow = result.value;
+                rowToInclude = relation1.data[a].concat(relation2.data[b]);
+            } else {
+                // Naravni stik
+                let equal = true;
+                let secondRow = [...relation1.data[a]];
                 for (let i = 0; i < relation2.data[b].length; i++) {
                     if (relation2.header[i] in parameters) {
                         if (parameters[relation2.header[i]] != relation2.data[b][i]) {
@@ -81,39 +124,57 @@ function joinOperations(operator, relation1, relation2, parametersToken, operati
                         secondRow.push(relation2.data[b][i])
                     }
                 }
-                if (equal) {
-                    combinedData.push(relation1.data[a].concat(secondRow));
+                includeRow = equal;
+                rowToInclude = secondRow;
+            }
+            if (includeRow) {
+                if (combinedData.length > maxNumberOfLines) {
+                    break mainLoop;
                 }
+                combinedData.push(rowToInclude);
+                used1[a] = true;
+                used2[b] = true;
             }
         }
-        combinedRelation.types = relation1.types.concat(relation2.types);
-        combinedRelation.header = relation1.header.concat(relation2.header.filter(el => !relation1.header.includes(el)));
-        combinedRelation.data = combinedData;
-        combinedRelation.name = newName;
-        return { type: 'result', relation: validateRelation(combinedRelation) };
     }
 
-    if (operator == "⨝" && parametersToken) {
-        let combinedRelation = join(relation1, relation2, parametersToken, false, false, newName);
-        if (combinedRelation.type == 'error') { return combinedRelation; }
-        else { return { type: 'result', relation: combinedRelation }; }
+    // add null values for outer joins
+    if (leftOuter) {
+        for (let i = 0; i < used1.length; i++) {
+            if (!used1[i]) {
+                if (combinedData.length > maxNumberOfLines) {
+                    break;
+                }
+                combinedData.push(relation1.data[i].concat(new Array(relation2.header.length).fill(null)));
+            }
+        }
     }
-    if (operator == "⋊" && parametersToken) {
-        let combinedRelation = join(relation1, relation2, parametersToken, true, false, newName);
-        if (combinedRelation.type == 'error') { return combinedRelation; }
-        else { return { type: 'result', relation: combinedRelation }; }
+    if (rightOuter) {
+        for (let i = 0; i < used2.length; i++) {
+            if (!used2[i]) {
+                if (combinedData.length > maxNumberOfLines) {
+                    break;
+                }
+                combinedData.push(new Array(relation1.header.length).fill(null).concat(relation2.data[i]));
+            }
+        }
     }
-    if (operator == "⋉" && parametersToken) {
-        let combinedRelation = join(relation1, relation2, parametersToken, false, true, newName);
-        if (combinedRelation.type == 'error') { return combinedRelation; }
-        else { return { type: 'result', relation: combinedRelation }; }
+
+    if (conditionToken) {
+        combinedRelation.types = relation1.types.concat(relation2.types);
+        combinedRelation.header = relation1.header.concat(relation2.header);
+    } else {
+        combinedRelation.types = [...relation1.types];
+        for (let i = 0; i < relation2.header.length; i++) {
+            if (!relation1.header.includes(relation2.header[i])) {
+                combinedRelation.types.push(relation2.types[i]);
+            }
+        }
+        combinedRelation.header = relation1.header.concat(relation2.header.filter(el => !relation1.header.includes(el)));
     }
-    if (operator == "⟗" && parametersToken) {
-        let combinedRelation = join(relation1, relation2, parametersToken, true, true, newName);
-        if (combinedRelation.type == 'error') { return combinedRelation; }
-        else { return { type: 'result', relation: combinedRelation }; }
-    }
-    return { type: 'error', description: 'Manjkajo parametri operacije', location: operationToken.location, locationEnd: operationToken.locationEnd }
+    combinedRelation.data = combinedData;
+    combinedRelation.name = newName;
+    return validateRelation(combinedRelation);
 }
 
 function division(result1, result2) {
