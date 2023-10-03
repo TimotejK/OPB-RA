@@ -11,7 +11,7 @@ function projection(result1, parametersToken) {
             includedColumns.push(convertedToken);
             includedColumnIndex.push(columnNames.indexOf(convertedToken));
         } else {
-            return { type: 'error', description: 'Neveljavno ime stolpca', location: tokens[j].location };
+            return { type: 'error', description: 'Neveljavno ime stolpca', location: tokens[j].location, locationEnd: tokens[j].locationEnd };
         }
     }
 
@@ -44,7 +44,7 @@ function diference(result1, result2) {
     return { type: 'result', relation: convertDataFromText(combinedRelation), explanation: explanation };
 }
 
-function joinOperations(operator, relation1, relation2, parametersToken) {
+function joinOperations(operator, relation1, relation2, parametersToken, operationToken) {
     let newName = relation1.name + operator + relation2.name;
     if (operator == "⨯") {
         let combinedRelation = {};
@@ -108,6 +108,12 @@ function joinOperations(operator, relation1, relation2, parametersToken) {
         if (combinedRelation.type == 'error') { return combinedRelation; }
         else { return { type: 'result', relation: combinedRelation }; }
     }
+    if (operator == "⟗" && parametersToken) {
+        let combinedRelation = join(relation1, relation2, parametersToken, true, true, newName);
+        if (combinedRelation.type == 'error') { return combinedRelation; }
+        else { return { type: 'result', relation: combinedRelation }; }
+    }
+    return { type: 'error', description: 'Manjkajo parametri operacije', location: operationToken.location, locationEnd: operationToken.locationEnd }
 }
 
 function division(result1, result2) {
@@ -116,10 +122,10 @@ function division(result1, result2) {
     let columns1 = relation1.header;
     let columns2 = relation2.header;
     let finalColumns = columns1.filter(value => !columns2.includes(value))
-    let finalColumnsToken = { token: Array.from(finalColumns).join(", "), type: 'word', location: 0 }
+    let finalColumnsToken = { token: Array.from(finalColumns).join(", "), type: 'word', location: 0, locationEnd: 1 }
     
     let p1 = projection(result1, finalColumnsToken);
-    let r1 = joinOperations("⨯", p1.relation, result2.relation, null);
+    let r1 = joinOperations("⨯", p1.relation, result2.relation, null, null);
     let r2 = diference(r1, result1);
     let p2 = projection(r2, finalColumnsToken);
     return diference(p1, p2);
