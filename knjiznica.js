@@ -45,7 +45,7 @@ let operationDescriptions = [
     {name: "Selekcija", examples: ["σ[A > 3](r)"]},
     {name: "Preimenovanje", examples: ["ρ[q(C, D)](r)"]},
     {name: "Agregacija in grupiranje", examples: ["τ[COUNT A](r)", "[A]τ[MAX B](r)"]},
-    {name: "Skalarni produkt", examples: ["r ⨯ q"]},
+    {name: "Kartezični produkt", examples: ["r ⨯ q"]},
     {name: "Naravni in pogojni stik", examples: ["r ⨝ q", "r ⨝[A = C] q"]},
     {name: "Desno odprti stik", examples: ["r ⋉ q", "r ⋉[A = C] q"]},
     {name: "Levo odprti stik", examples: ["r ⋊ q", "r ⋊[A = C] q"]},
