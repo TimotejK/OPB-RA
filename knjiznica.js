@@ -209,14 +209,14 @@ function convertDataToText(relation) {
     relation.data.forEach(row => {
         rows.push(JSON.stringify(row));
     });
-    return { name: relation.name, header: relation.header, types: relation.types, data: rows };
+    return { name: relation.name, header: relation.header, types: relation.types, data: rows, fromRelationName: relation.fromRelationName };
 }
 function convertDataFromText(relation) {
     let rows = [];
     relation.data.forEach(row => {
         rows.push(JSON.parse(row));
     });
-    return { name: relation.name, header: relation.header, types: relation.types, data: rows };
+    return { name: relation.name, header: relation.header, types: relation.types, data: rows, fromRelationName: relation.fromRelationName };
 }
 
 function compareRelationAndToken(relation, token) {
@@ -233,7 +233,9 @@ function insertValue(tokenizedExpression) {
         for (let i = 0; i < relations.length; i++) {
             if (compareRelationAndToken(relations[i], tokenizedExpression[0].token)) {
                 let explanation = '<span class="variable">' + relations[i].name + "</span>";
-                return { type: 'result', relation: validateRelation(relations[i]), explanation: explanation }
+                let relation = relations[i];
+                relation['fromRelationName'] = getDefaultFromRelationName(relation);
+                return { type: 'result', relation: validateRelation(relation), explanation: explanation }
             }
         }
         return { type: 'error', description: 'Neznano ime spremenljivke', location: tokenizedExpression[0].location, locationEnd: tokenizedExpression[0].locationEnd }
@@ -367,10 +369,17 @@ function isNumeric(str) {
         !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
 }
 
-function convertRow(row, header, columnNames) {
+// Returns a list of selected values from a row. ColumnNames is a list of values that we want to get 
+function convertRowToStringOfValues(row, relation, columnNames) {
     let values = [];
-    for (let i = 0; i < header.length; i++) {
-        if (columnNames.includes(header[i])) {
+    for (let i = 0; i < relation.header.length; i++) {
+        if (columnNames.includes(relation.header[i])) {
+            values.push(row[i])
+        }
+    }
+    let headerWithPrefix = getPrefixedHeader(relation);
+    for (let i = 0; i < headerWithPrefix.length; i++) {
+        if (columnNames.includes(headerWithPrefix[i])) {
             values.push(row[i])
         }
     }
@@ -383,16 +392,45 @@ function convertRow(row, header, columnNames) {
 //     }
 // }
 
+function getPrefixedHeader(relation) {
+    let result = [];
+    for (let i = 0; i < relation.header.length; i++) {
+        result.push(relation.fromRelationName[i] + "." + relation.header[i]);
+    }
+    return result;
+}
+function indexOfColumn(relation, columnName) {
+    // column name could contain a prefix
+    let header = relation.header;
+    if (header.includes(columnName)) {
+        return header.indexOf(columnName);
+    }
+    header = getPrefixedHeader(relation);
+    if (header.includes(columnName)) {
+        return header.indexOf(columnName);
+    }
+    return -1;
+}
+function getDefaultFromRelationName(relation) {
+    let result = [];
+    for (let i = 0; i < relation.header.length; i++) {
+        result.push(relation.name);
+    }
+    return result;
+}
+
 function aggregation(relation, columnNames, functions) {
-    let columnNamesForGroups = columnNames.map(name => convertTokenToVariableName(relation.header, name.token));
-    let columnTypesForGroups = columnNamesForGroups.map(name => relation.types[relation.header.indexOf(name)]);
+    let columnNamesForGroups = columnNames.map(name => convertTokenToVariableName(relation.header.concat(getPrefixedHeader(relation)), name.token));
+    let columnTypesForGroups = columnNamesForGroups.map(name => relation.types[indexOfColumn(relation, name)]);
+    let relationNamesForGroups = columnNamesForGroups.map(name => relation.fromRelationName[indexOfColumn(relation, name)]);
     let groups = [""];
     if (columnNames.length > 0) {
-        groups = Array.from(new Set(relation.data.map(row => { return convertRow(row, relation.header, columnNamesForGroups) })));
+        groups = Array.from(new Set(relation.data.map(row => { return convertRowToStringOfValues(row, relation, columnNamesForGroups) })));
     }
 
     let validFunctions = ['SUM', 'AVG', 'MIN', 'MAX', 'COUNT'];
     let validColumns = relation.header;
+    let validColumnsWithPrefix = getPrefixedHeader(relation);
 
     let functionName = [];
     let functionParametersIndexes = [];
@@ -406,9 +444,11 @@ function aggregation(relation, columnNames, functions) {
             } else {
                 return { type: 'error', description: 'Neveljavno ime agregacijske funkcije: ' + functions[i].token, location: functions[i].location, locationEnd: functions[i].locationEnd };
             }
-            let agregationOverColumn = convertTokenToVariableName(validColumns, functions[i + 1].token);
+            let agregationOverColumn = convertTokenToVariableName(validColumns.concat(validColumnsWithPrefix), functions[i + 1].token);
             if (validColumns.includes(agregationOverColumn)) {
                 functionParametersIndexes.push(validColumns.indexOf(agregationOverColumn))
+            } else if (validColumnsWithPrefix.includes(agregationOverColumn)) {
+                functionParametersIndexes.push(validColumnsWithPrefix.indexOf(agregationOverColumn))
             } else {
                 return { type: 'error', description: 'Neveljavno ime atributa: ' + functions[i + 1].token, location: functions[i + 1].location, locationEnd: functions[i + 1].locationEnd };
             }
@@ -430,7 +470,7 @@ function aggregation(relation, columnNames, functions) {
 
             let values = [];
             for (let j = 0; j < relation.data.length; j++) {
-                if (columnNames.length == 0 || group == convertRow(relation.data[j], relation.header, columnNamesForGroups)) {
+                if (columnNames.length == 0 || group == convertRowToStringOfValues(relation.data[j], relation, columnNamesForGroups)) {
                     values.push(relation.data[j][functionParametersIndexes[fun]]);
                 }
             }
@@ -462,15 +502,17 @@ function aggregation(relation, columnNames, functions) {
     }
     let header = columnNamesForGroups;
     let types = columnTypesForGroups;
+    let fromRelationName = relationNamesForGroups;
     for (let fun = 0; fun < functionName.length; fun++) {
         header.push(null);
+        fromRelationName.push("");
         if (functionName[fun] == 'COUNT') {
             types.push('number');
         } else {
             types.push(relation.types[functionParametersIndexes[fun]]);
         }
     }
-    let newRelation = { types: types, header: header, data: rows, name: relation.name };
+    let newRelation = { types: types, header: header, data: rows, name: relation.name, fromRelationName: fromRelationName };
     return { type: 'result', relation: validateRelation(newRelation) };
 }
 
@@ -524,8 +566,10 @@ function applySimpleOperations(tokenizedExpression) {
                 let newData = [];
                 for (let j = 0; j < rightSide.relation.data.length; j++) {
                     let variables = {};
+                    let prefixedHeader = getPrefixedHeader(rightSide.relation);
                     for (let k = 0; k < rightSide.relation.data[j].length; k++) {
                         variables[rightSide.relation.header[k]] = rightSide.relation.data[j][k];
+                        variables[prefixedHeader[k]] = rightSide.relation.data[j][k];
                     }
 
                     let result = logicExpression(found.parametersAfter.token, variables, found.parametersAfter.location);
@@ -536,7 +580,7 @@ function applySimpleOperations(tokenizedExpression) {
                     }
                 }
 
-                let newRelation = { types: rightSide.relation.types, header: rightSide.relation.header, data: newData, name: newName };
+                let newRelation = { types: rightSide.relation.types, header: rightSide.relation.header, data: newData, name: newName, fromRelationName: rightSide.relation.fromRelationName};
                 return { type: 'result', relation: validateRelation(newRelation), explanation: explanation };
             }
 
@@ -546,6 +590,7 @@ function applySimpleOperations(tokenizedExpression) {
                 tokenizedArgument = tokenizedArgument.tokens;
                 let newRelationName = null;
                 let newColumnNames = null;
+                let newFromRelationName = getDefaultFromRelationName(rightSide.relation);
                 let newColumnNamesLocation = 0;
                 let newColumnNamesLocationEnd = 0;
                 for (let i = 0; i < tokenizedArgument.length; i++) {
@@ -557,6 +602,7 @@ function applySimpleOperations(tokenizedExpression) {
                             return { type: 'error', description: 'Ime relacije mora biti pred imeni argumentov', location: tokenizedArgument[i].location, locationEnd: tokenizedArgument[i].locationEnd };
                         }
                         newRelationName = tokenizedArgument[i].token;
+                        newFromRelationName = Array(newFromRelationName.length).fill(newRelationName)
                     }
                     if (tokenizedArgument[i].type == '(') {
                         if (newColumnNames) {
@@ -587,7 +633,7 @@ function applySimpleOperations(tokenizedExpression) {
                     newColumnNames = rightSide.relation.header;
                 }
 
-                let newRelation = { types: rightSide.relation.types, header: newColumnNames, data: rightSide.relation.data, name: newRelationName };
+                let newRelation = { types: rightSide.relation.types, header: newColumnNames, data: rightSide.relation.data, name: newRelationName, fromRelationName: newFromRelationName };
                 return { type: 'result', relation: validateRelation(newRelation), explanation: explanation };
             }
 
@@ -644,6 +690,7 @@ function applyDoubleOperations(tokenizedExpression) {
                 let relation = rightSide.relation;
                 relation.name = relationName;
                 relation.shortName = relationName;
+                relation.fromRelationName = getDefaultFromRelationName(relation);
                 relations.push(relation);
                 return rightSide;
             }
@@ -806,6 +853,12 @@ function displayResult(id, result, expression) {
             html += "<th>" + result.relation.header[i] + "</th>"
         }
         html += "</tr>";
+        
+        // html += "<tr>";
+        // for (let i = 0; i < result.relation.fromRelationName.length; i++) {
+        //     html += "<th>" + result.relation.fromRelationName[i] + "</th>"
+        // }
+        // html += "</tr>";
 
         for (let row = 0; row < result.relation.data.length; row++) {
             html += "<tr>";

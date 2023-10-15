@@ -1,15 +1,20 @@
 function projection(result1, parametersToken) {
     let columnNames = result1.relation.header;
+    let columnNamesWithPrefix = getPrefixedHeader(result1.relation);
+
     let includedColumns = [];
     let includedColumnIndex = [];
     let tokens = tokenize(parametersToken.token, parametersToken.location);
     if (tokens.type == 'error') { return tokens; }
     tokens = tokens.tokens;
     for (let j = 0; j < tokens.length; j++) {
-        let convertedToken = convertTokenToVariableName(columnNames, tokens[j].token);
+        let convertedToken = convertTokenToVariableName(columnNames.concat(columnNamesWithPrefix), tokens[j].token);
         if (columnNames.includes(convertedToken)) {
             includedColumns.push(convertedToken);
             includedColumnIndex.push(columnNames.indexOf(convertedToken));
+        } else if (columnNamesWithPrefix.includes(convertedToken)) {
+            includedColumns.push(convertedToken);
+            includedColumnIndex.push(columnNamesWithPrefix.indexOf(convertedToken));
         } else {
             return { type: 'error', description: 'Neveljavno ime stolpca', location: tokens[j].location, locationEnd: tokens[j].locationEnd };
         }
@@ -24,12 +29,16 @@ function projection(result1, parametersToken) {
         newData.push(row);
     }
     let types = [];
+    let newHeader = [];
+    let fromRelationName = [];
     for (let k = 0; k < includedColumnIndex.length; k++) {
         types.push(result1.relation.types[includedColumnIndex[k]]);
+        newHeader.push(result1.relation.header[includedColumnIndex[k]]);
+        fromRelationName.push(result1.relation.fromRelationName[includedColumnIndex[k]]);
     }
 
     let newName = "π" + result1.relation.name;
-    let newRelation = { types: types, header: includedColumns, data: newData, name: newName };
+    let newRelation = { types: types, header: newHeader, data: newData, name: newName, fromRelationName: fromRelationName };
     let explanation = '<span class="operator">' + "π" + "</span><sub>" + parametersToken.token + "</sub> (" + result1.explanation + ")";
     return { type: 'result', relation: validateRelation(newRelation), explanation:explanation };
 }
@@ -56,6 +65,7 @@ function joinOperations(operator, relation1, relation2, parametersToken, operati
         }
         combinedRelation.types = relation1.types.concat(relation2.types);
         combinedRelation.header = relation1.header.concat(relation2.header);
+        combinedRelation.fromRelationName = relation1.fromRelationName.concat(relation2.fromRelationName);
         combinedRelation.data = combinedData;
         combinedRelation.name = newName;
         return { type: 'result', relation: validateRelation(combinedRelation) };
@@ -85,7 +95,7 @@ function joinOperations(operator, relation1, relation2, parametersToken, operati
         let combinedRelation = join(relation1, relation2, parametersToken, false, false, newName);
         if (combinedRelation.type == 'error') { return combinedRelation; }
 
-        let finalColumnsToken = { token: Array.from(relation1.header).join(", "), type: 'word', location: 0, locationEnd: 1 }
+        let finalColumnsToken = { token: Array.from(getPrefixedHeader(relation1)).join(", "), type: 'word', location: 0, locationEnd: 1 }
         let p1 = projection({ type: 'result', relation: combinedRelation }, finalColumnsToken);
         return { type: 'result', relation: p1.relation };
     }
@@ -102,17 +112,19 @@ function join(relation1, relation2, conditionToken, leftOuter, rightOuter, newNa
     for (let a = 0; a < relation1.data.length; a++) {
         for (let b = 0; b < relation2.data.length; b++) {
             let parameters = {};
+            let prefixedHeader = getPrefixedHeader(relation1);
             for (let i = 0; i < relation1.data[a].length; i++) {
                 parameters[relation1.header[i]] = relation1.data[a][i];
-                parameters[relation1.name + "." + relation1.header[i]] = relation1.data[a][i];
+                parameters[prefixedHeader[i]] = relation1.data[a][i];
             }
             let includeRow = false;
             let rowToInclude = [];
             if (conditionToken) {
                 // Pogojni stik
+                let prefixedHeader2 = getPrefixedHeader(relation2);
                 for (let i = 0; i < relation2.data[b].length; i++) {
                     parameters[relation2.header[i]] = relation2.data[b][i];
-                    parameters[relation2.name + "." + relation2.header[i]] = relation2.data[b][i];
+                    parameters[prefixedHeader2[i]] = relation2.data[b][i];
                 }
                 let result = logicExpression(conditionToken.token, parameters, conditionToken.location)
                 if (result.type == 'error') { return result; }
@@ -170,12 +182,15 @@ function join(relation1, relation2, conditionToken, leftOuter, rightOuter, newNa
 
     if (conditionToken) {
         combinedRelation.types = relation1.types.concat(relation2.types);
+        combinedRelation.fromRelationName = relation1.fromRelationName.concat(relation2.fromRelationName);
         combinedRelation.header = relation1.header.concat(relation2.header);
     } else {
         combinedRelation.types = [...relation1.types];
+        combinedRelation.fromRelationName = [...relation1.fromRelationName];
         for (let i = 0; i < relation2.header.length; i++) {
             if (!relation1.header.includes(relation2.header[i])) {
                 combinedRelation.types.push(relation2.types[i]);
+                combinedRelation.fromRelationName.push(relation2.fromRelationName[i]);
             }
         }
         combinedRelation.header = relation1.header.concat(relation2.header.filter(el => !relation1.header.includes(el)));
