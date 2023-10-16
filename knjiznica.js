@@ -739,6 +739,18 @@ function applyDoubleOperations(tokenizedExpression) {
 
 }
 
+function checkForInvalidOperations(tokenizedExpression) {
+    let operations = ['∧', '∨', '¬', '=', '≠', '≤', '≥', '<', '>'];
+    for (let i = 0; i < operations.length; i++) {
+        let operator = operations[i];
+        let found = findOperation(tokenizedExpression, operator);
+        if (found) {
+            return { type: 'error', description: 'Operacija ' + found.operationToken.token + ' ni definirana med relacijami (uporabla se samo znotraj logičnih izrazov).', location: found.operationToken.location, locationEnd: found.operationToken.locationEnd };
+        }
+    }
+    return null;
+}
+
 function evaluateExpression(expression, startPosition) {
     let tokenizationResult = tokenize(expression, startPosition)
     if (tokenizationResult.type == "error") {
@@ -767,6 +779,9 @@ function evaluateExpression(expression, startPosition) {
     tokenizedExpression.forEach(el => {
         izraz += " " + el.token;
     })
+
+    result = checkForInvalidOperations(tokenizedExpression);
+    if (result) { return result; }
 
     return { type: 'error', description: 'Neznana operacija:' + izraz, location: tokenizedExpression[0].location, locationEnd: tokenizedExpression.slice(-1)[0].locationEnd };
 }
