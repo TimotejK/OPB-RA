@@ -214,8 +214,13 @@ function division(result1, result2, location) {
     let finalColumnsToken = { token: Array.from(finalColumns).join(", "), type: 'word', location: 0, locationEnd: 1 }
     
     let p1 = projection(result1, finalColumnsToken);
-    let r1 = joinOperations("⨯", p1.relation, result2.relation, null, null);
-    let r2 = diference(r1, result1);
+    let r1 = joinOperations("⨯", p1.relation, result2.relation, null, null); // all possible combinations of first and second part of relations
+
+    let columnsForComparison = r1.relation.header;
+    let columnsForComparisonToken = { token: columnsForComparison.join(", "), type: 'word', location: 0, locationEnd: 1 }
+    let result1WithReorderedColumns = projection(result1, columnsForComparisonToken);
+
+    let r2 = diference(r1, result1WithReorderedColumns);
     let p2 = projection(r2, finalColumnsToken);
     let d1 = diference(p1, p2);
     if (d1.type == 'error') {
