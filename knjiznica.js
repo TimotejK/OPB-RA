@@ -845,7 +845,7 @@ function addSymbol(symbol, jqueryPath, index) {
         myField.value += symbol;
     }
 }
-prepareTesting();
+// prepareTesting();
 
 function addLoadEvent(func) {
     var oldonload = document.onload;
