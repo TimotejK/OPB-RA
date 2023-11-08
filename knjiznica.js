@@ -791,35 +791,37 @@ function prepareTesting() {
 	} else {
 		window.RATesterAlreadyLoaded = true;
         $('div.answer>textarea').each(function(index) {
-            $('<div id="results-' + index + '"></div>').insertAfter(this);
-			$(`<div class="d-grid gap-2"><span class="btn btn-primary" onclick="runEvaluation('div.answer>textarea', ` + index + `, 'results-` + index + `')">Evalviraj</span></div>`).insertAfter(this);
-            let textarea = this;
-            let html = "";
-            html += "<div>";
-            for (let i = 0; i < operationsForTokenization.length; i++) {
-                html += "<div class=\"btn btn-primary\" onclick=\"addSymbol('" + operationsForTokenization[i] + "', 'div.answer>textarea', " + index + ")\">" + operationsForTokenization[i] + "</div>"
+            if (getDomain(index)) {
+                $('<div id="results-' + index + '"></div>').insertAfter(this);
+                $(`<div class="d-grid gap-2"><span class="btn btn-primary" onclick="loadDomainAndRunEvaluation('div.answer>textarea', ` + index + `, 'results-` + index + `')">Evalviraj</span></div>`).insertAfter(this);
+                let textarea = this;
+                let html = "";
+                html += "<div>";
+                for (let i = 0; i < operationsForTokenization.length; i++) {
+                    html += "<div class=\"btn btn-primary\" onclick=\"addSymbol('" + operationsForTokenization[i] + "', 'div.answer>textarea', " + index + ")\">" + operationsForTokenization[i] + "</div>"
+                }
+                html += "</div>";
+                html += `
+                    <style>
+                    .butt {
+                    border: 1px outset blue;
+                    background-color: lightBlue;
+                    height:20px;
+                    width:20px;
+                    cursor:pointer;
+                    float:left;
+                    text-align: center;
+                    }
+                    .red {
+                        color: red;
+                    }
+                    .butt:hover {
+                    background-color: blue;
+                    color:white;
+                    }
+                </style>`;
+                textarea.insertAdjacentHTML('beforebegin', html);
             }
-            html += "</div>";
-            html += `
-            <style>
-            .butt {
-            border: 1px outset blue;
-            background-color: lightBlue;
-            height:20px;
-            width:20px;
-            cursor:pointer;
-            float:left;
-            text-align: center;
-            }
-            .red {
-                color: red;
-            }
-            .butt:hover {
-            background-color: blue;
-            color:white;
-            }
-        </style>`;
-            textarea.insertAdjacentHTML('beforebegin', html);
 		});
     }
 }
@@ -927,4 +929,27 @@ function runEvaluation(jqueryPath, index, resultsId) {
     let expression = $(jqueryPath)[index].value
     expression = insertAlternativeSymbols(expression);
     runExpresionSequence(expression, resultsId);
+}
+
+function getDomain(index) {
+    var db = $('span:contains("Relacijska algebra nad domeno"):eq(' + index + ')>u').text().trim();
+    if (db == '') {
+        db = $('span:contains("Relacijska algebra nad domeno"):eq(' + index + ')>span').text().trim();
+    }
+    return db;
+}
+
+function loadDomainAndRunEvaluation(jqueryPath, index, resultsId) {
+    let domain = getDomain(index);
+    console.log(domain);
+    
+    var client = new XMLHttpRequest();
+    client.open('GET', 'https://raw.githubusercontent.com/TimotejK/OPB-LA/main/' + domain + '.js');
+    client.onreadystatechange = function() {
+        let js = client.responseText;
+        eval(js);
+        runEvaluation(jqueryPath, index, resultsId)
+    }
+    client.send();
+
 }
