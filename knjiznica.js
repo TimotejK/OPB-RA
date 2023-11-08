@@ -792,7 +792,7 @@ function prepareTesting() {
 		window.RATesterAlreadyLoaded = true;
         $('div.answer>textarea').each(function(index) {
             $('<div id="results-' + index + '"></div>').insertAfter(this);
-			$(`<div class="d-grid gap-2"><button class="btn btn-primary" onclick="runEvaluation('div.answer>textarea', ` + index + `, 'results-` + index + `')">Evalviraj</button></div>`).insertAfter(this);
+			$(`<div class="d-grid gap-2"><span class="btn btn-primary" onclick="runEvaluation('div.answer>textarea', ` + index + `, 'results-` + index + `')">Evalviraj</span></div>`).insertAfter(this);
             let textarea = this;
             let html = "";
             html += "<div>";
@@ -860,6 +860,9 @@ function addLoadEvent(func) {
         }
     }
 }
+$(document).ready(function() {
+	prepareTesting();
+});
 addLoadEvent(function () { prepareTesting() });
 
 function displayResult(id, result, expression) {
