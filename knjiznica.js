@@ -847,25 +847,10 @@ function addSymbol(symbol, jqueryPath, index) {
         myField.value += symbol;
     }
 }
-// prepareTesting();
 
-function addLoadEvent(func) {
-    var oldonload = document.onload;
-    if (typeof document.onload != 'function') {
-        document.onload = func;
-    } else {
-        document.onload = function () {
-            if (oldonload) {
-                oldonload();
-            }
-            func();
-        }
-    }
-}
 $(document).ready(function() {
 	prepareTesting();
 });
-addLoadEvent(function () { prepareTesting() });
 
 function displayResult(id, result, expression) {
     let html = "";
