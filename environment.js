@@ -4,11 +4,11 @@ function describeRelations() {
     let html = "";
     for (let i = 0; i < relations.length; i++) {
         let relation = relations[i];
-        html += '<div class="click" onclick="addSymbol(\'' + relation.name + '\')">';
+        html += '<div class="click" onclick="addSymbol(\'' + relation.name + '\', \`#text\`, 0)">';
         html += relation.name;
         html += "</div>";
         for (let j = 0; j < relation.header.length; j++) {
-            html += '<div class="click" style="margin-left: 4em;" onclick="addSymbol(\'' + relation.header[j] + '\')">';
+            html += '<div class="click" style="margin-left: 4em;" onclick="addSymbol(\'' + relation.header[j] + '\', \`#text\`, 0)">';
             html += relation.header[j];
             html += '<small style="margin-left: 1em;" class="text-secondary">' + relation.types[j] + "</small>";
             html += "</div>";
@@ -36,7 +36,7 @@ function bootstrapButtons() {
             }
             tooltiptext += '</span>';
 
-            html += '<button type="button" class="btn btn-outline-secondary buttontip" onclick="addSymbol(\'' + operationsForTokenization[i] + '\')">' + 
+            html += '<button type="button" class="btn btn-outline-secondary buttontip" onclick="addSymbol(\'' + operationsForTokenization[i] + '\', \`#text\`, 0)">' + 
             operationsForTokenization[i] + 
             tooltiptext +
             '</button>';

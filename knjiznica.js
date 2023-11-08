@@ -786,40 +786,47 @@ function evaluateExpression(expression, startPosition) {
     return { type: 'error', description: 'Neznana operacija:' + izraz, location: tokenizedExpression[0].location, locationEnd: tokenizedExpression.slice(-1)[0].locationEnd };
 }
 
-function buttons(id) {
-    let textarea = document.getElementById(id);
-    let html = "";
-    html += "<div>";
-    for (let i = 0; i < operationsForTokenization.length; i++) {
-        html += "<div class=\"butt\" onclick=\"addSymbol('" + operationsForTokenization[i] + "')\">" + operationsForTokenization[i] + "</div>"
+function prepareTesting() {
+    if (window.RATesterAlreadyLoaded) {
+	} else {
+		window.RATesterAlreadyLoaded = true;
+        $('div.answer>textarea').each(function(index) {
+            $('<div id="results-' + index + '"></div>').insertAfter(this);
+			$(`<div class="d-grid gap-2"><button class="btn btn-primary" onclick="runEvaluation('div.answer>textarea', ` + index + `, 'results-` + index + `')">Evalviraj</button></div>`).insertAfter(this);
+            let textarea = this;
+            let html = "";
+            html += "<div>";
+            for (let i = 0; i < operationsForTokenization.length; i++) {
+                html += "<div class=\"btn btn-primary\" onclick=\"addSymbol('" + operationsForTokenization[i] + "', 'div.answer>textarea', " + index + ")\">" + operationsForTokenization[i] + "</div>"
+            }
+            html += "</div>";
+            html += `
+            <style>
+            .butt {
+            border: 1px outset blue;
+            background-color: lightBlue;
+            height:20px;
+            width:20px;
+            cursor:pointer;
+            float:left;
+            text-align: center;
+            }
+            .red {
+                color: red;
+            }
+            .butt:hover {
+            background-color: blue;
+            color:white;
+            }
+        </style>`;
+            textarea.insertAdjacentHTML('beforebegin', html);
+		});
     }
-    html += "</div><br/><br/><div id=\"results\"></div>";
-    html += `
-    <style>
-    .butt {
-      border: 1px outset blue;
-      background-color: lightBlue;
-      height:20px;
-      width:20px;
-      cursor:pointer;
-      float:left;
-      text-align: center;
-    }
-
-    .red {
-        color: red;
-    }
-
-    .butt:hover {
-      background-color: blue;
-      color:white;
-    }
-  </style>`;
-    textarea.insertAdjacentHTML('afterend', html);
 }
 
-function addSymbol(symbol) {
-    let myField = document.getElementById("text");
+function addSymbol(symbol, jqueryPath, index) {
+    let myField = $(jqueryPath)[index];
+    // let myField = document.getElementById("text");
 
     //IE support
     if (document.selection) {
@@ -838,6 +845,7 @@ function addSymbol(symbol) {
         myField.value += symbol;
     }
 }
+prepareTesting();
 
 function addLoadEvent(func) {
     var oldonload = document.onload;
@@ -852,7 +860,7 @@ function addLoadEvent(func) {
         }
     }
 }
-addLoadEvent(function () { buttons("text") });
+addLoadEvent(function () { prepareTesting() });
 
 function displayResult(id, result, expression) {
     let html = "";
@@ -897,23 +905,23 @@ function displayResult(id, result, expression) {
         html += "</p>";
     }
 
-    document.getElementById('results').innerHTML = html;
+    document.getElementById(id).innerHTML = html;
 }
 
-function runExpresionSequence(expressionsString, id) {
+function runExpresionSequence(expressionsString, resultsId) {
     let relationsOld = [...relations];
     let expressions = expressionsString.split("\n");
     for (let i = 0; i < expressions.length; i++) {
         if (expressions[i].trim().length == 0) {continue;}
         result = evaluateExpression(expressions[i], 0);
         console.log(result);
-        displayResult(id, result, expressions[i])
+        displayResult(resultsId, result, expressions[i])
     }
     relations = relationsOld;
 }
 
-function runEvaluation(id) {
-    let expression = document.getElementById(id).value
-    expression = insertAlternativeSymbols(expression, id);
-    runExpresionSequence(expression);
+function runEvaluation(jqueryPath, index, resultsId) {
+    let expression = $(jqueryPath)[index].value
+    expression = insertAlternativeSymbols(expression);
+    runExpresionSequence(expression, resultsId);
 }
