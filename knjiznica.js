@@ -798,32 +798,83 @@ function prepareTesting() {
                 let html = "";
                 html += "<div>";
                 for (let i = 0; i < operationsForTokenization.length; i++) {
-                    html += "<div class=\"btn btn-primary\" onclick=\"addSymbol('" + operationsForTokenization[i] + "', 'div.answer>textarea', " + index + ")\">" + operationsForTokenization[i] + "</div>"
+                    let tooltiptext = '<span class="buttontiptext">';
+                    if (operationDescriptions.length > i) {
+                        tooltiptext += operationDescriptions[i].name + '<br />';
+                        for (let j = 0; j < operationDescriptions[i].examples.length; j++) {
+                            tooltiptext += operationDescriptions[i].examples[j] + '<br />';
+                        }
+                    }
+                    tooltiptext += '</span>';
+                    html += "<div class=\"btn btn-primary buttontip\" onclick=\"addSymbol('" + operationsForTokenization[i] + "', 'div.answer>textarea', " + index + ")\">" + 
+                    operationsForTokenization[i] + 
+                    tooltiptext + 
+                    "</div>"
                 }
                 html += "</div>";
-                html += `
-                    <style>
-                    .butt {
-                    border: 1px outset blue;
-                    background-color: lightBlue;
-                    height:20px;
-                    width:20px;
-                    cursor:pointer;
-                    float:left;
-                    text-align: center;
-                    }
-                    .red {
-                        color: red;
-                    }
-                    .butt:hover {
-                    background-color: blue;
-                    color:white;
-                    }
-                </style>`;
+                html += "<style>";
+                html += getCSS();
+                html += "</style>";
                 textarea.insertAdjacentHTML('beforebegin', html);
             }
 		});
     }
+}
+
+function getCSS() {
+    return `
+    .butt {
+        border: 1px outset blue;
+        background-color: lightBlue;
+        height:20px;
+        width:20px;
+        cursor:pointer;
+        float:left;
+        text-align: center;
+        }
+        .red {
+            color: red;
+        }
+        .butt:hover {
+        background-color: blue;
+        color:white;
+        }
+    .buttontip {
+        position: relative;
+        display: inline-block;
+        border-bottom: 1px dotted black;
+      }
+  
+      .buttontip .buttontiptext {
+        visibility: hidden;
+        width: 200px;
+        background-color: black;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px 0;
+        position: absolute;
+        z-index: 1;
+        top: 150%;
+        left: 50%;
+        margin-left: -100px;
+      }
+  
+      .buttontip .buttontiptext::after {
+        content: "";
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: transparent transparent black transparent;
+      }
+  
+      .buttontip:hover .buttontiptext {
+        visibility: visible;
+      }
+    `;
 }
 
 function addSymbol(symbol, jqueryPath, index) {
