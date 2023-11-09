@@ -14,7 +14,7 @@ function projection(result1, parametersToken) {
             includedColumnIndex.push(columnNames.indexOf(convertedToken));
         } else if (columnNamesWithPrefix.includes(convertedToken)) {
             includedColumns.push(convertedToken);
-            includedColumnIndex.push(columnNamesWithPrefix.indexOf(convertedToken));
+            includedColumnIndex.push(columnNamesWithPrefix.indexOf(convertedToken) % columnNames.length);
         } else {
             return { type: 'error', description: 'Neveljavno ime stolpca', location: tokens[j].location, locationEnd: tokens[j].locationEnd };
         }
@@ -95,7 +95,7 @@ function joinOperations(operator, relation1, relation2, parametersToken, operati
         let combinedRelation = join(relation1, relation2, parametersToken, false, false, newName);
         if (combinedRelation.type == 'error') { return combinedRelation; }
 
-        let finalColumnsToken = { token: Array.from(getPrefixedHeader(relation1)).join(", "), type: 'word', location: 0, locationEnd: 1 }
+        let finalColumnsToken = { token: Array.from(getPrefixedHeader(relation1).slice(0, relation1.header.length)).join(", "), type: 'word', location: 0, locationEnd: 1 }
         let p1 = projection({ type: 'result', relation: combinedRelation }, finalColumnsToken);
         return { type: 'result', relation: p1.relation };
     }
@@ -115,7 +115,9 @@ function join(relation1, relation2, conditionToken, leftOuter, rightOuter, newNa
             let prefixedHeader = getPrefixedHeader(relation1);
             for (let i = 0; i < relation1.data[a].length; i++) {
                 parameters[relation1.header[i]] = relation1.data[a][i];
-                parameters[prefixedHeader[i]] = relation1.data[a][i];
+            }
+            for (let i = 0; i < prefixedHeader.length; i++) {
+                parameters[prefixedHeader[i]] = relation1.data[a][i % relation1.data[a].length];
             }
             let includeRow = false;
             let rowToInclude = [];
@@ -124,7 +126,9 @@ function join(relation1, relation2, conditionToken, leftOuter, rightOuter, newNa
                 let prefixedHeader2 = getPrefixedHeader(relation2);
                 for (let i = 0; i < relation2.data[b].length; i++) {
                     parameters[relation2.header[i]] = relation2.data[b][i];
-                    parameters[prefixedHeader2[i]] = relation2.data[b][i];
+                }
+                for (let i = 0; i < prefixedHeader2.length; i++) {
+                    parameters[prefixedHeader2[i]] = relation2.data[b][i % relation2.data[b].length];
                 }
                 let result = logicExpression(conditionToken.token, parameters, conditionToken.location)
                 if (result.type == 'error') { return result; }

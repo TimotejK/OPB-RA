@@ -381,7 +381,7 @@ function convertRowToStringOfValues(row, relation, columnNames) {
     let headerWithPrefix = getPrefixedHeader(relation);
     for (let i = 0; i < headerWithPrefix.length; i++) {
         if (columnNames.includes(headerWithPrefix[i])) {
-            values.push(row[i])
+            values.push(row[i % relation.header.length])
         }
     }
     return JSON.stringify(values);
@@ -398,6 +398,9 @@ function getPrefixedHeader(relation) {
     for (let i = 0; i < relation.header.length; i++) {
         result.push(relation.fromRelationName[i] + "." + relation.header[i]);
     }
+    for (let i = 0; i < relation.header.length; i++) {
+        result.push(relation.fromRelationName[i].substr(0, 1) + "." + relation.header[i]);
+    }
     return result;
 }
 function indexOfColumn(relation, columnName) {
@@ -408,7 +411,7 @@ function indexOfColumn(relation, columnName) {
     }
     header = getPrefixedHeader(relation);
     if (header.includes(columnName)) {
-        return header.indexOf(columnName);
+        return header.indexOf(columnName) % relation.header.length;
     }
     return -1;
 }
@@ -449,7 +452,7 @@ function aggregation(relation, columnNames, functions) {
             if (validColumns.includes(agregationOverColumn)) {
                 functionParametersIndexes.push(validColumns.indexOf(agregationOverColumn))
             } else if (validColumnsWithPrefix.includes(agregationOverColumn)) {
-                functionParametersIndexes.push(validColumnsWithPrefix.indexOf(agregationOverColumn))
+                functionParametersIndexes.push(validColumnsWithPrefix.indexOf(agregationOverColumn) % validColumns.length)
             } else {
                 return { type: 'error', description: 'Neveljavno ime atributa: ' + functions[i + 1].token, location: functions[i + 1].location, locationEnd: functions[i + 1].locationEnd };
             }
@@ -567,10 +570,12 @@ function applySimpleOperations(tokenizedExpression) {
                 let newData = [];
                 for (let j = 0; j < rightSide.relation.data.length; j++) {
                     let variables = {};
-                    let prefixedHeader = getPrefixedHeader(rightSide.relation);
                     for (let k = 0; k < rightSide.relation.data[j].length; k++) {
                         variables[rightSide.relation.header[k]] = rightSide.relation.data[j][k];
-                        variables[prefixedHeader[k]] = rightSide.relation.data[j][k];
+                    }
+                    let prefixedHeader = getPrefixedHeader(rightSide.relation);
+                    for (let k = 0; k < prefixedHeader.length; k++) {
+                        variables[prefixedHeader[k]] = rightSide.relation.data[j][k % rightSide.relation.data[j].length];
                     }
 
                     let result = logicExpression(found.parametersAfter.token, variables, found.parametersAfter.location);
