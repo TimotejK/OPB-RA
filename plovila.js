@@ -14,11 +14,11 @@ relations = [
     {
         name: 'PLOVILO', header: ['PID', 'PIme', 'Barva'], types: ['number', 'string', 'string'], shortName: 'p',
         data: [
-            [1, 'Betka', 'Bela'],
-            [2, 'Micka', 'Modra'],
-            [3, 'Mojca', 'Rdeča'],
-            [4, 'Nika', 'Modra'],
-            [5, 'Berta', 'Rumena']
+            [1, 'Velika Betka', 'Bela'],
+            [2, 'Plavajoča Micka', 'Modra'],
+            [3, 'Sinji galeb', 'Rdeča'],
+            [4, 'Piranski zaliv', 'Modra'],
+            [5, 'Piranski zaliv', 'Rumena']
         ]
     },
     {
