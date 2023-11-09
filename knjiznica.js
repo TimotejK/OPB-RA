@@ -158,6 +158,7 @@ function findOperation(tokenizedExpression, operation) {
     return null;
 }
 
+global_domain_name = "default"
 let relations = [
     {
         name: 'oseba', header: ['ID', 'Ime', 'Rojen', 'SID'], types: ['number', 'string', 'date', 'number'], shortName: 'o',
@@ -978,14 +979,17 @@ function getDomain(index) {
 function loadDomainAndRunEvaluation(jqueryPath, index, resultsId) {
     let domain = getDomain(index);
     console.log(domain);
-    
-    var client = new XMLHttpRequest();
-    client.open('GET', 'https://raw.githubusercontent.com/TimotejK/OPB-LA/main/' + domain + '.js');
-    client.onreadystatechange = function() {
-        let js = client.responseText;
-        eval(js);
-        runEvaluation(jqueryPath, index, resultsId)
+    if (domain != global_domain_name) {
+        var client = new XMLHttpRequest();
+        client.open('GET', 'https://raw.githubusercontent.com/TimotejK/OPB-LA/main/' + domain + '.js');
+        client.onreadystatechange = function() {
+            let js = client.responseText;
+            eval(js);
+            global_domain_name = domain;
+            runEvaluation(jqueryPath, index, resultsId);
+        }
+        client.send();
+    } else {
+        runEvaluation(jqueryPath, index, resultsId);
     }
-    client.send();
-
 }
