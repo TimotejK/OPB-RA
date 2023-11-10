@@ -486,7 +486,7 @@ function aggregation(relation, columnNames, functions) {
             } else if (aggregationFunction == "AVG") {
                 result = 0;
                 values.forEach(v => { result += v; })
-                reuslt /= values.length;
+                result /= values.length;
             } else if (aggregationFunction == "MIN") {
                 result = values[0];
                 values.forEach(v => { if (v < result) { result = v; } })
