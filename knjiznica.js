@@ -974,9 +974,10 @@ function runEvaluation(jqueryPath, index, resultsId) {
 }
 
 function getDomain(index) {
-    var db = $('span:contains("Relacijska algebra nad domeno"):eq(' + index + ')>u').text().trim();
+    var question = $('div.answer>textarea:eq(' + index + ')').parent().parent().parent();
+    var db = question.find('span:contains("Relacijska algebra nad domeno")>u').text().trim();
     if (db == '') {
-        db = $('span:contains("Relacijska algebra nad domeno"):eq(' + index + ')>span').text().trim();
+        db = question.find('span:contains("Relacijska algebra nad domeno")>span').text().trim();
     }
     return db;
 }
