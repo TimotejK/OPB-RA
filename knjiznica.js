@@ -373,15 +373,18 @@ function isNumeric(str) {
 // Returns a list of selected values from a row. ColumnNames is a list of values that we want to get 
 function convertRowToStringOfValues(row, relation, columnNames) {
     let values = [];
+    alreadyUsedColumns = [];
     for (let i = 0; i < relation.header.length; i++) {
-        if (columnNames.includes(relation.header[i])) {
-            values.push(row[i])
+        if (!alreadyUsedColumns.includes(relation.header[i]) && columnNames.includes(relation.header[i])) {
+            alreadyUsedColumns.push(relation.header[i]);
+            values.push(row[i]);
         }
     }
     let headerWithPrefix = getPrefixedHeader(relation);
     for (let i = 0; i < headerWithPrefix.length; i++) {
-        if (columnNames.includes(headerWithPrefix[i])) {
-            values.push(row[i % relation.header.length])
+        if (!alreadyUsedColumns.includes(headerWithPrefix[i]) && columnNames.includes(headerWithPrefix[i])) {
+            alreadyUsedColumns.push(headerWithPrefix[i]);
+            values.push(row[i % relation.header.length]);
         }
     }
     return JSON.stringify(values);
