@@ -430,6 +430,13 @@ function aggregation(relation, columnNames, functions) {
     let columnNamesForGroups = columnNames.map(name => convertTokenToVariableName(relation.header.concat(getPrefixedHeader(relation)), name.token));
     let columnTypesForGroups = columnNamesForGroups.map(name => relation.types[indexOfColumn(relation, name)]);
     let relationNamesForGroups = columnNamesForGroups.map(name => relation.fromRelationName[indexOfColumn(relation, name)]);
+    // check if column names for groups are valid
+    for (let i = 0; i < columnNamesForGroups.length; i++) {
+        if (!relation.header.concat(getPrefixedHeader(relation)).includes(columnNamesForGroups[i])) {
+            return { type: 'error', description: 'Neveljavno ime stolpca za grupiranje: ' + columnNamesForGroups[i], location: columnNames[i].location, locationEnd: columnNames[i].locationEnd };
+        }
+    }
+
     let groups = [""];
     if (columnNames.length > 0) {
         groups = Array.from(new Set(relation.data.map(row => { return convertRowToStringOfValues(row, relation, columnNamesForGroups) })));
@@ -511,8 +518,8 @@ function aggregation(relation, columnNames, functions) {
     let types = columnTypesForGroups;
     let fromRelationName = relationNamesForGroups;
     for (let fun = 0; fun < functionName.length; fun++) {
-        header.push(null);
-        fromRelationName.push("");
+        header.push("null");
+        fromRelationName.push("null");
         if (functionName[fun] == 'COUNT') {
             types.push('number');
         } else {
@@ -652,6 +659,12 @@ function applySimpleOperations(tokenizedExpression) {
                     tokenizedGroups = tokenize(found.parametersBefore.token, found.parametersBefore.location);
                     if (tokenizedGroups.type == 'error') { return tokenizedGroups; }
                     tokenizedGroups = tokenizedGroups.tokens;
+                }
+
+                 
+                // check if columnNamesForGroupsAreValid
+                for (let i = 0; i < 0; i++) {
+                    tokenizedGroups[i];
                 }
 
                 let tokenizedFunctions = tokenize(found.parametersAfter.token, found.parametersAfter.location);
