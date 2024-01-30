@@ -40,6 +40,9 @@ function findMatchingParenthesis(expression, firstLocation, open, close, startin
 let operationsForTokenization = ['π', 'σ', 'ρ', 'τ', '⨯', '⨝', '⋉', '⋊', '⟗', '▷', '∩', '∪', '/', '-', '←',
     '∧', '∨', '¬', '=', '≠', '≤', '≥', '<', '>'];
 
+let parenthesisPairs = [['(', ')'], ['[', ']'], ['"', '"'], ["'", "'"]];
+let tokenEndingChars = [' ', ';', ','];
+
 let operationDescriptions = [
     {name: "Projekcija", examples: ["π[A, B](r)"]},
     {name: "Selekcija", examples: ["σ[A > 3](r)"]},
@@ -78,9 +81,6 @@ function tokenize(expression, startPosition) {
     let tokenStart = 0;
     let tokenEnd = 0;
     let tokens = []
-
-    let parenthesisPairs = [['(', ')'], ['[', ']'], ['"', '"'], ["'", "'"]];
-    let tokenEndingChars = [' ', ';', ','];
 
     mainLoop:
     while (tokenEnd <= expression.length) {
@@ -420,8 +420,13 @@ function indexOfColumn(relation, columnName) {
 }
 function getDefaultFromRelationName(relation) {
     let result = [];
+    let badCharacters = tokenEndingChars.concat(parenthesisPairs.flat().concat(operationsForTokenization))
     for (let i = 0; i < relation.header.length; i++) {
-        result.push(relation.name);
+        let name = relation.name;
+        for (let j = 0; j < badCharacters.length; j++) {
+            name = name.replaceAll(badCharacters[j], "");
+        }
+        result.push(name);
     }
     return result;
 }
