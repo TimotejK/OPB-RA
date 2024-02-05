@@ -373,18 +373,11 @@ function isNumeric(str) {
 // Returns a list of selected values from a row. ColumnNames is a list of values that we want to get 
 function convertRowToStringOfValues(row, relation, columnNames) {
     let values = [];
-    alreadyUsedColumns = [];
-    for (let i = 0; i < relation.header.length; i++) {
-        if (!alreadyUsedColumns.includes(relation.header[i]) && columnNames.includes(relation.header[i])) {
-            alreadyUsedColumns.push(relation.header[i]);
-            values.push(row[i]);
-        }
-    }
-    let headerWithPrefix = getPrefixedHeader(relation);
-    for (let i = 0; i < headerWithPrefix.length; i++) {
-        if (!alreadyUsedColumns.includes(headerWithPrefix[i]) && columnNames.includes(headerWithPrefix[i])) {
-            alreadyUsedColumns.push(headerWithPrefix[i]);
-            values.push(row[i % relation.header.length]);
+    let convertedColumnNames = columnNames.map(name => convertTokenToVariableName(relation.header.concat(getPrefixedHeader(relation)), name));
+    for (let i = 0; i < columnNames.length; i++) {
+        let columnIndex = indexOfColumn(relation, convertedColumnNames[i]);
+        if (columnIndex >= 0) {
+            values.push(row[columnIndex]);
         }
     }
     return JSON.stringify(values);
@@ -420,7 +413,7 @@ function indexOfColumn(relation, columnName) {
 }
 function getDefaultFromRelationName(relation) {
     let result = [];
-    let badCharacters = tokenEndingChars.concat(parenthesisPairs.flat().concat(operationsForTokenization))
+    let badCharacters = tokenEndingChars.concat(parenthesisPairs.flat().concat(operationsForTokenization));
     for (let i = 0; i < relation.header.length; i++) {
         let name = relation.name;
         for (let j = 0; j < badCharacters.length; j++) {
@@ -442,6 +435,7 @@ function aggregation(relation, columnNames, functions) {
         }
     }
 
+    // Groups contains all of the possible values for the group by parameters that appear in the table
     let groups = [""];
     if (columnNames.length > 0) {
         groups = Array.from(new Set(relation.data.map(row => { return convertRowToStringOfValues(row, relation, columnNamesForGroups) })));
@@ -482,11 +476,13 @@ function aggregation(relation, columnNames, functions) {
         let group = groups[i];
         let row = [];
         if (columnNames.length > 0) {
+            // Add the values of the group by parameters
             row = JSON.parse(group)
         }
         for (let fun = 0; fun < functionName.length; fun++) {
             let aggregationFunction = functionName[fun];
-
+            
+            // get the values over which to apply the aggregation function
             let values = [];
             for (let j = 0; j < relation.data.length; j++) {
                 if (columnNames.length == 0 || group == convertRowToStringOfValues(relation.data[j], relation, columnNamesForGroups)) {
