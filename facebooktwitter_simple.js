@@ -1,6 +1,6 @@
 relations = [
     {
-        name: 'facebook', header: ['OID', 'PID'], types: ['number', 'number'], shortName: 'f',
+        name: 'facebook', header: ['OID', 'PID'], types: ['string', 'string'], shortName: 'f',
         data: [
             ['Jill', 'Jack'],
             ['Jack', 'Jill'],
@@ -13,7 +13,7 @@ relations = [
         ]
     },
     {
-        name: 'twitter', header: ['OID', 'SID'], types: ['number', 'number'], shortName: 't',
+        name: 'twitter', header: ['OID', 'SID'], types: ['string', 'string'], shortName: 't',
         data: [
             ['Jill', 'Jack'],
             ['Joe', 'Jack'],
