@@ -1004,7 +1004,7 @@ function loadDomainAndRunEvaluation(jqueryPath, index, resultsId) {
     console.log(domain);
     if (domain != global_domain_name) {
         var client = new XMLHttpRequest();
-        client.open('GET', 'https://raw.githubusercontent.com/TimotejK/OPB-LA/main/' + domain + '.js');
+        client.open('GET', 'https://raw.githubusercontent.com/TimotejK/OPB-RA/main/' + domain + '.js');
         client.onreadystatechange = function() {
             let js = client.responseText;
             eval(js);
